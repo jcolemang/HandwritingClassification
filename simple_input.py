@@ -10,13 +10,15 @@ import time
 black = 0, 0, 0
 white = 255, 255, 255
 # ~~~~~ Note that resize quality will be important. The computer needs to be able to read our data.
-size = 500, 500
+size = 1000, 500
 image_size = 28, 28
 mouse_was_pressed = False
+eraser_mode = False
+r = 7
 prev = pygame.mouse.get_pos()
 current = pygame.mouse.get_pos()
 image_path = '/home/coleman/Pictures/im.png'
-
+save_path = '/home/coleman/Pictures/saved.bmp'
 
 # this is surely extremely slow. Find a builtin to do this for me
 def PixelArray_to_numpy_array( pa, grayscale=True ):
@@ -59,10 +61,9 @@ def get_display_vector( display ):
 
 
 def check_input( display ):
-    global prev, current, mouse_was_pressed
+    global prev, current, mouse_was_pressed, eraser_mode, save_path
 
     for event in pygame.event.get():
-
         # keyboard input
         if event.type == pygame.KEYDOWN:
             # which key?    
@@ -73,15 +74,32 @@ def check_input( display ):
                 # This all will absolutely be redesigned but some classification could go here.
                 display.fill( white )
 
+            if event.key == pygame.K_e:
+                display.fill( white )
+
+            if event.key == pygame.K_s:
+                pygame.image.save(display, save_path)
+
 
         # the 'X' arrow
         if event.type == pygame.QUIT:
             exit_application()
-        
+       
+        if pygame.mouse.get_pressed()[1]:
+            eraser_mode = True
+            r = 12
+        else:
+            eraser_mode = False
+            r = 7
+
         if pygame.mouse.get_pressed()[0]:
             prev = current
             current = pygame.mouse.get_pos()
-            draw_on_mouse( display, 3, black, prev, current )
+            if eraser_mode:
+                c = white
+            else:
+                c = black
+            draw_on_mouse( display, r, c, prev, current )
  
         else:
             mouse_pressed = False
@@ -89,8 +107,7 @@ def check_input( display ):
             current = pygame.mouse.get_pos()
 
 def draw_on_mouse( display, radius, color, prev, curr ):
-    
-    pygame.draw.line( display, color, prev, curr, 3 )    
+    pygame.draw.line( display, color, prev, curr, radius )    
 
 
 
@@ -105,11 +122,12 @@ def main():
     background_color = white
     display = pygame.display.set_mode(size)
     display.fill(background_color)
+    clock = pygame.time.Clock()
 
     while True:
-
+        clock.tick(60)
         check_input( display )
-        
+            
         pygame.display.update()
 
 

@@ -1,0 +1,299 @@
+"""
+
+Please don't judge me on the code. 
+I am writing this to be as stupid simple
+as possible and am paying literally no mind
+to efficiency. Really I'm almost 
+intentionally inefficient in a couple
+places just to make it that much easier
+to write. I just want to see if this nonsense
+will work at all.
+
+TODO: Comment all this nonsense.
+
+"""
+from math import sqrt
+import pygame
+import numpy
+import pdb
+
+Noise = 0
+Border = 1
+Core = 2 
+
+colors = [ (255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 0, 255), (0, 255, 255), (100, 100, 100), (150, 150, 150), (255, 100, 0), (255, 0, 100) ]
+for i in range(1000):
+    colors.append((0,0,0))
+
+eps = 10 
+threshhold_num = 8 
+
+
+def clusters_to_surface( groups, size ):
+    surf = pygame.Surface( size )
+    surf.fill( (255, 255, 255) )
+    for i in range(len(groups)):
+        for point in groups[i]:
+            color = colors[i]
+            surf.set_at( point.get_pos(), color )
+    return surf
+
+
+def split_matrix_into_point_tuples( matrix ):
+    points = []
+    for i in range(len(matrix)):
+        for j in range(len(matrix[0])):
+            val = matrix[i][j]
+            if val == 255 or val == True:
+                points.append( (i, j) )
+    return points
+
+
+def matrix_to_dbscan_point_list( matrix ):
+    points = []
+    for i in range(len(matrix)):
+        for j in range(len(matrix[0])):
+            val = matrix[i][j]
+            if val == 0:
+                points.append( DBSCANClusterPoint( i, j ) )
+    return points
+
+
+class ClusterPoint(object):
+
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+        self.grouped = False
+
+
+    def get_pos(self):
+        return self.x, self.y
+
+
+    def distance_to( self, other_point ):
+        x_diff = ( other_point.x - self.x ) * 5
+        y_diff = ( other_point.y - self.y ) * 0.1
+        return sqrt(x_diff * x_diff + y_diff * y_diff)
+
+
+    def get_points_within_dist( self, points, dist ):
+        pts = []
+        for point in points:
+            if self.distance_to( point ) > dist:
+                pts.append( point )
+        return pts
+
+
+    def get_num_points_within_dist( self, points, dist ):
+        return len( self.get_num_points_within_dist(points, dist) )
+
+
+    def set_is_grouped(self, val=True):
+        self.grouped = val 
+
+
+    def is_grouped(self):
+        return self.grouped
+
+
+class DBSCANClusterPoint( ClusterPoint ):
+
+
+    def __init__( self, x, y ):
+        super( DBSCANClusterPoint, self).__init__(x, y)
+        self.classification = Noise
+        self.connected_to = []        
+
+    def upgrade(self):
+        if self.classification != Core:
+            self.classification = Border
+
+    def is_noise(self):
+        return self.classification == Noise
+
+    def is_core(self):
+        return self.classification == Core
+
+    def is_border(self):
+        return self.classification == Border
+
+    def connect_to( self, other_pt ):
+        self.connected_to.append( other_pt )
+
+    def is_connected_to( self, other_pt ):
+        return other_pt in self.connected_to
+
+
+def classify_points( points, eps, core_threshhold_num ): 
+    for point in points:
+        pts_in_radius = point.get_points_within_dist( points, eps )
+        if len(pts_in_radius) >= core_threshhold_num:
+            point.classification = Core
+            for pt in pts_in_radius:
+                pt.upgrade()
+                
+                
+def eliminate_noise_points( points ):
+    for pt in points:
+        if pt.is_noise():
+            points.remove(pt)
+
+
+def get_border_points( points ):
+    border_points = [] 
+    for pt in points:
+        if pt.is_border():
+            border_points.append(pt)
+    return border_points
+
+# this should be done during classification
+def get_core_points( points ):
+    core_points = [] 
+    for pt in points:
+        if pt.is_core():
+            core_points.append(pt)
+    return core_points
+
+ 
+def connect_core_points( core_points, eps ):
+    for i in range( len(core_points) ):
+        for j in range( i+1, len(core_points) ):
+            pt1 = core_points[i]
+            pt2 = core_points[j]
+            if pt1.distance_to( pt2 ) < eps:
+                pt1.connect_to( pt2 )
+                pt2.connect_to( pt1 )
+
+
+def group_core_points( core_points ):
+    groups = [] 
+    for point in core_points:
+        i = 0
+        while i < len(groups):
+            group = groups[i]
+            for group_point in group:
+                if group_point.is_connected_to(point):
+                    group.append(point)
+                    point.set_is_grouped()
+                    break
+            if point.is_grouped():
+                break
+            i += 1
+        if not point.is_grouped():
+            groups.append([point])
+    return groups
+
+
+def group_border_points( border_points, core_groups, eps ):
+    for pt in border_points:
+        in_a_group = False
+        for group in core_groups:
+            for core_pt in group:
+                if pt.distance_to( core_pt ) < eps:
+                    in_a_group = True
+                    group.append( pt )
+                    break
+        if in_a_group:
+            break
+
+
+# this is surely extremely slow. Find a builtin to do this for me
+def PixelArray_to_numpy_array( pa, grayscale=True ):
+    pa_size = len(pa), len(pa[0])
+    arr = numpy.empty( pa_size, dtype=int )
+    for i in range( pa_size[0] ):
+        for j in range( pa_size[1] ):
+            pixel = pa[i][j]
+            new_val = ( (0xff & pixel) + ((0xff00 & pixel) >> 8) + ((0xff0000 & pixel) >> 16) ) // 3        
+            arr[i][j] = new_val
+    return arr
+
+
+def get_average( iterable ):
+    total = 0
+    num = 0
+    for i in iterable:
+        num += 1
+        total += i
+    return total / num
+
+
+def all_or_nothing(vector, max_val=255, min_val=0, threshhold=225):
+    for i in range(len(vector)):
+        if vector[i] > threshhold:
+            vector[i] = max_val
+        else:
+            vector[i] = min_val
+
+# TODO: add support for the resizing option.
+def get_display_matrix( display, resize=True ):
+    surface = pygame.display.get_surface()
+    arr = PixelArray_to_numpy_array( pygame.PixelArray(surface) )
+    return arr
+
+
+def get_display_vector( display, resize=True ):
+    surf = pygame.display.get_surface()
+    arr = PixelArray_to_numpy_array( pygame.PixelArray(surf) )
+    im = Image.fromarray( numpy.uint8(arr), 'L')
+    im_small = im.resize( image_size, Image.ANTIALIAS )
+    vec = numpy.array( im_small )
+    vec = vec.ravel()
+    all_or_nothing(vec)
+    return vec
+
+def combine_groups(groups):
+    i = 0
+    while i < len(groups):
+        j = i + 1
+        while j < len(groups):
+            groups_combined = False
+            for pt1 in groups[i]:
+                for pt2 in groups[j]:
+                    if pt1.is_connected_to(pt2):
+                        groups_combined = True
+                        for pt in groups[j]:
+                            groups[i].append(pt)
+                        groups.remove(groups[j])
+                        print 'Clusters {0} and {1} combined'.format(i, j)
+                        break
+                if not j < len(groups):
+                    break
+            if not groups_combined:
+                j += 1
+        i += 1
+
+
+def dbscan( display ):
+    # eps = 30 
+    # threshhold_num = 20
+    pixel_array = get_display_matrix( display )
+    print 'Pixel array extracted. Size: {0}, {1}' \
+            .format( len(pixel_array), len(pixel_array[0]) )
+    dbscan_points = matrix_to_dbscan_point_list( pixel_array ) 
+    print 'Points extracted from array. Size: {0}'.format( len(dbscan_points) )
+    classify_points( dbscan_points, eps, threshhold_num )
+    print 'Points classified'
+    s = len(dbscan_points)
+    eliminate_noise_points( dbscan_points )
+    print 'Noise eliminated. \n\tSize before: {0}\n\tSize after: {1}'\
+            .format(s, len(dbscan_points))
+    core_points = get_core_points( dbscan_points ) 
+    border_points = get_border_points( dbscan_points )
+    connect_core_points( core_points, eps )
+    print 'Core points connected\nNum core points: {0}'.format(len(core_points))
+    groups = group_core_points( core_points )
+    print 'Core points grouped' 
+    group_border_points( border_points, groups, eps  ) 
+    print 'Border points grouped\nNum border points: {0}'.format(len(border_points)) 
+    print 'Number of clusters: {0}'.format( len(groups) )  
+    print 'Combining clusters'
+    combine_groups(groups)
+    print 'DBSCAN complete'
+    return clusters_to_surface( groups, display.get_size() )
+
+
+
+
+

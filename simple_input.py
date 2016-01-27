@@ -34,9 +34,10 @@ def check_input( display, classifier):
                 print 'Enter pressed'
                 vectors = dbscan.get_square_cluster_image_vectors( display, (28, 28) )
 
-                print 'Predictions:'
+                title = ''
                 for v in vectors:
-                    print classifier.predict(v) 
+                    title += str(classifier.predict(v))
+                pygame.display.set_caption(title)
 
                 surf = dbscan.color_clusters( display )
                 display.blit( surf, (0, 0) )

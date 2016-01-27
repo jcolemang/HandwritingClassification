@@ -24,11 +24,36 @@ Border = 1
 Core = 2 
 
 colors = [ (255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 0, 255), (0, 255, 255), (100, 100, 100), (150, 150, 150), (255, 100, 0), (255, 0, 100) ]
-for i in range(1000):
+for i in range(100):
     colors.append((0,0,0))
 
 eps = 10 
 threshhold_num = 8 
+
+
+def scale_to_max_val(vec, max_val=None):
+    if max_val == None:
+        max_val = max(vec)
+    vec_copy = vec.copy()
+    for i in range(len(vec)):
+        vec_copy[i] = vec[i] / max_val
+    return vec_copy
+
+def replace_negatives(vec):
+    return_vec = vec.copy()
+    for i in range(len(vec)):
+        return_vec[i] = abs(vec[i])
+    return return_vec
+
+
+def all_or_nothing(vec, max_val=1):
+    vec_copy = vec.copy()
+    for i in range(len(vec)):
+        if vec[i] != 0:
+            vec_copy[i] = max_val
+        else:
+            vec_copy[i] = 0
+    return vec_copy
 
 
 def clusters_to_surface( groups, size ):
@@ -221,15 +246,8 @@ def get_average( iterable ):
     return total / num
 
 
-def all_or_nothing(vector, max_val=255, min_val=0, threshhold=225):
-    for i in range(len(vector)):
-        if vector[i] > threshhold:
-            vector[i] = max_val
-        else:
-            vector[i] = min_val
-
 # TODO: add support for the resizing option.
-def get_display_matrix( display, resize=True ):
+def get_display_matrix( display ):
     surface = pygame.display.get_surface()
     arr = PixelArray_to_numpy_array( pygame.PixelArray(surface) )
     return arr
@@ -258,7 +276,6 @@ def combine_groups(groups):
                         for pt in groups[j]:
                             groups[i].append(pt)
                         groups.remove(groups[j])
-                        print 'Clusters {0} and {1} combined'.format(i, j)
                         break
                 if not j < len(groups):
                     break
@@ -306,23 +323,22 @@ def cluster_to_square_image(cluster):
         row_shift += (padding / 2) + (num_cols - num_rows) / 2
         col_shift += (padding / 2) 
     
-    im_array = [ [0 for col in range(square_size+padding)] \
-            for row in range(square_size+padding) ]
+    #im_array = [ [0 for col in range(square_size+padding)] \
+    #        for row in range(square_size+padding) ]
+
+    im_array = numpy.zeros( (square_size+padding, square_size+padding) )
 
     for point in cluster:
         pos = point.get_position()
         x = pos[0] + col_shift
         y = pos[1] + row_shift
-        im_array[y][x] = 1
+        im_array[y][x] = 255
 
-    # for row in im_array:
-    #     print row
-
-    image = Image.new('L', (len(im_array), len(im_array[0])) ) 
-    image.putdata(im_array)
+    image = Image.fromarray(im_array)
+    
     return image    
 
-def dbscan( display, print_stuff=True ):
+def dbscan( display, print_stuff=False ):
     # eps = 30 
     # threshhold_num = 20
     pixel_array = get_display_matrix( display )
@@ -370,26 +386,11 @@ def get_square_cluster_image_vectors( display, image_size ):
         images.append( cluster_to_square_image( group ) )
     for image in images:
         resized = image.resize( image_size, Image.ANTIALIAS )
-        image_vectors.append( numpy.array(resized).ravel() )
+        vec = numpy.array(resized).ravel()
+        vec = replace_negatives(vec)
+        vec = scale_to_max_val(vec, max_val=255)
+        image_vectors.append( vec )
     return image_vectors
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

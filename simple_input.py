@@ -3,7 +3,7 @@ import numpy
 import sys
 import pygame
 pygame.init()
-
+from classifier import Classifier
 import dbscan
 
 import time
@@ -22,8 +22,7 @@ save_path = '/home/coleman/Pictures/saved.bmp'
 
 
 
-
-def check_input( display ):
+def check_input( display, classifier):
     global prev, current, mouse_was_pressed, eraser_mode, save_path
 
     for event in pygame.event.get():
@@ -33,12 +32,16 @@ def check_input( display ):
 
             if event.key == pygame.K_RETURN:
                 print 'Enter pressed'
-                vectors = dbscan.get_square_cluster_image_vectors( display, (26, 26) )
+                vectors = dbscan.get_square_cluster_image_vectors( display, (28, 28) )
+
+                print 'Predictions:'
+                for v in vectors:
+                    print classifier.predict(v) 
+
                 surf = dbscan.color_clusters( display )
                 display.blit( surf, (0, 0) )
                 pygame.display.update()
-                print len(vectors)
-                time.sleep(5)
+                time.sleep(1)
 
             if event.key == pygame.K_e:
                 print "'e' pressed"
@@ -89,11 +92,11 @@ def main():
     display = pygame.display.set_mode(size)
     display.fill(background_color)
     clock = pygame.time.Clock()
+    classifier = Classifier()
 
     while True:
         clock.tick(60)
-        # pygame.draw.line( display, black, (50, 50), (50+dbscan.eps, 50), 10 )    
-        check_input( display )            
+        check_input( display, classifier )            
         pygame.display.update()
 
 

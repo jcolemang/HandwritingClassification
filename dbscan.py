@@ -76,7 +76,7 @@ def split_matrix_into_point_tuples( matrix ):
     return points
 
 
-def matrix_to_dbscan_point_list( matrix ):
+def matrix_to_point_list( matrix ):
     points = []
     for i in range(len(matrix)):
         for j in range(len(matrix[0])):
@@ -92,16 +92,22 @@ class ClusterPoint(object):
         self.x = x
         self.y = y
         self.grouped = False
-
+        self._distance_to = {}
 
     def get_position(self):
         return self.x, self.y
 
 
     def distance_to( self, other_point ):
-        x_diff = ( other_point.x - self.x ) * 5
-        y_diff = ( other_point.y - self.y ) * 0.1
-        return sqrt(x_diff * x_diff + y_diff * y_diff)
+        try:
+            dist = self._distance_to[other_point]
+        except KeyError:
+            x_diff = ( other_point.x - self.x ) * 5
+            y_diff = ( other_point.y - self.y ) * 0.1
+            dist = sqrt(x_diff * x_diff + y_diff * y_diff)
+            self._distance_to[ other_point ] = dist
+            other_point._distance_to[ self ] = dist
+        return dist
 
 
     def get_points_within_dist( self, points, dist ):
@@ -338,7 +344,7 @@ def cluster_to_square_image(cluster):
     
     return image    
 
-def dbscan( display, print_stuff=False ):
+def dbscan( display, print_stuff=True ):
     # eps = 30 
     # threshhold_num = 20
     pixel_array = get_display_matrix( display )
@@ -346,7 +352,7 @@ def dbscan( display, print_stuff=False ):
     if print_stuff: print 'Pixel array extracted. Size: {0}, {1}' \
                         .format( len(pixel_array), len(pixel_array[0]) )
 
-    dbscan_points = matrix_to_dbscan_point_list( pixel_array ) 
+    dbscan_points = matrix_to_point_list( pixel_array ) 
 
     if print_stuff: print 'Points extracted from array. Size: {0}'.format( len(dbscan_points) )
 
@@ -375,6 +381,11 @@ def dbscan( display, print_stuff=False ):
 def color_clusters( display ):
     clusters = dbscan( display, print_stuff=False )
     return clusters_to_surface( clusters, display.get_size() )
+
+def dbscan_redo( display ):
+    pixel_array = get_display_matrix( display )
+    points = matrix_to_point_list( pixel_array )
+    classify_points( points )
 
 
 def get_square_cluster_image_vectors( display, image_size ):

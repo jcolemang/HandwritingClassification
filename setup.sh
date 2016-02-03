@@ -12,4 +12,8 @@ conda install anaconda-client
 # Install PIL (python image library)
 conda install pillow
 
+sudo apt-get install python-dev
+
+# for the c++ modules
+make
 

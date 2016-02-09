@@ -11,13 +11,12 @@
 static PyObject* 
 dbscan(PyObject* self, PyObject* args)
 {
-
-    printf("Calling c dbscan.\n");
-
     PyObject* list;
     double threshold_dist;
     int threshold_num;
+    int i;
 
+    printf("Check 1\n");
 
     /* Parsing the list */
     if ( !PyArg_ParseTuple(args, "Oid", &list, &threshold_num, &threshold_dist) )
@@ -25,21 +24,11 @@ dbscan(PyObject* self, PyObject* args)
        return NULL;  
     }
 
-
+    printf("check 2\n");
 
     /* Preparing my 'point' container */
-    int** points; 
     int list_length = PyList_Size(list);
-    int num_columns = 2;
-    int num_rows = list_length;
-
-    points = (int**) malloc(num_rows * sizeof(int*));
-    
-    int i;
-    for (i = 0; i < num_rows; i++)
-        points[i] = (int*) malloc(num_columns * sizeof(int));
-
-    //printf("All points:\n");
+    int points[list_length][DIMENSIONS];
 
     /* Parsing the tuples in the list into pairs of integers */
     int x, y, num_points = 0;
@@ -50,25 +39,37 @@ dbscan(PyObject* self, PyObject* args)
         
         if (!PyArg_ParseTuple(tuple, "ii", &x, &y))
         {
-            free(points);
-            return NULL;
+            return Py_BuildValue("i", 1);
         }
 
         points[i][0] = x;
         points[i][1] = y;
         num_points++;
-        //printf("%d, %d\n", points[i][0], points[i][1]);
     }
-
-    //printf("Thresholds: %d, %f\n", threshold_num, threshold_dist);
+    
+    printf("Check 3\n");
 
     /* Now lets actually do some scanning */
-    printf("Calling kd tree method.\n");
-    KD_Tree tree = construct_kd_tree(points, num_points);    
-    printf("Returned from kd tree method.\n");
-    
+    KD_Tree* tree = construct_kd_tree(points, num_points);    
 
-    free(points);
+    printf("Check 4\n");
+    
+    int pt_to_find[] = {100, 100};
+
+    print_all_node_values(tree);
+
+    printf("Check 4.5\n");
+
+    int* nearest_neighbor = get_nearest_neighbor( tree,  pt_to_find );
+    printf("(%d, %d) is the nearest to (%d, %d)\n", 
+            nearest_neighbor[0], nearest_neighbor[1], pt_to_find[0], pt_to_find[1]);
+
+    printf("Check 5\n");
+
+    free_tree(tree);
+
+    printf("Check 6\n");
+
     return Py_BuildValue("i", 0);
 }
 

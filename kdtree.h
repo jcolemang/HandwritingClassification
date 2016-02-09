@@ -1,29 +1,41 @@
-typedef struct Point Point;
-struct Point
+
+#define DIMENSIONS 2
+
+typedef struct Point
 {
     int x;
     int y;
-};
+} Point;
 
 
-typedef struct Node Node;
-struct Node
+typedef struct KD_Node
 {
-    int split_axis;
+    int split_dimension;
     int split_value;
     int is_a_leaf;
-    int has_left_node;
-    int has_right_node;
-    Node* left_node;
-    Node* right_node;
-    Point value;
-};
+    int has_left_child;
+    int has_right_child;
+    struct KD_Node* left_child;
+    struct KD_Node* right_child;
+    int* value;
+} KD_Node;
 
 
-typedef struct KD_Tree KD_Tree;
-struct KD_Tree 
+typedef struct KD_Tree 
 {
-    Node* root;
-};
+    KD_Node* root;
+    int num_dimensions;
+} KD_Tree;
 
-struct KD_Tree construct_kd_tree(int**, int);
+KD_Tree* construct_kd_tree(int[][DIMENSIONS], int);
+
+int** range_search(KD_Tree, int**);
+
+int* get_nearest_neighbor(KD_Tree*, int[DIMENSIONS]);
+
+void free_tree(KD_Tree*);
+
+void print_all_node_values( KD_Tree* );
+
+
+

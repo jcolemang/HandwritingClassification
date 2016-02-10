@@ -3,7 +3,7 @@ import numpy
 import sys
 import pygame
 pygame.init()
-
+from classifier import Classifier
 import dbscan
 
 import time
@@ -11,20 +11,18 @@ import time
 # defining some global connstants
 black = 0, 0, 0
 white = 255, 255, 255
-# ~~~~~ Note that resize quality will be important. The computer needs to be able to read our data.
 size = 500, 100
 image_size = 28, 28
 mouse_was_pressed = False
 eraser_mode = False
-r = 6
+r = 10
 prev = pygame.mouse.get_pos()
 current = pygame.mouse.get_pos()
 save_path = '/home/coleman/Pictures/saved.bmp'
 
 
 
-
-def check_input( display ):
+def check_input( display, classifier):
     global prev, current, mouse_was_pressed, eraser_mode, save_path
 
     for event in pygame.event.get():
@@ -34,11 +32,17 @@ def check_input( display ):
 
             if event.key == pygame.K_RETURN:
                 print 'Enter pressed'
-                surf = dbscan.dbscan( display )
-                # This all will absolutely be redesigned but some classification could go here.
+                vectors = dbscan.get_square_cluster_image_vectors( display, (28, 28) )
+
+                title = ''
+                for v in vectors:
+                    title += str(classifier.predict(v))
+                pygame.display.set_caption(title)
+
+                surf = dbscan.color_clusters( display )
                 display.blit( surf, (0, 0) )
                 pygame.display.update()
-                time.sleep(5)
+                time.sleep(1)
 
             if event.key == pygame.K_e:
                 print "'e' pressed"
@@ -89,11 +93,11 @@ def main():
     display = pygame.display.set_mode(size)
     display.fill(background_color)
     clock = pygame.time.Clock()
+    classifier = Classifier()
 
     while True:
         clock.tick(60)
-        # pygame.draw.line( display, black, (50, 50), (50+dbscan.eps, 50), 10 )    
-        check_input( display )            
+        check_input( display, classifier )            
         pygame.display.update()
 
 

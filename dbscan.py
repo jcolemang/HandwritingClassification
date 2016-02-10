@@ -16,17 +16,44 @@ from math import sqrt
 import pygame
 import numpy
 import pdb
+from PIL import Image
+from sys import exit
 
 Noise = 0
 Border = 1
 Core = 2 
 
 colors = [ (255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 0, 255), (0, 255, 255), (100, 100, 100), (150, 150, 150), (255, 100, 0), (255, 0, 100) ]
-for i in range(1000):
+for i in range(100):
     colors.append((0,0,0))
 
 eps = 10 
 threshhold_num = 8 
+
+
+def scale_to_max_val(vec, max_val=None):
+    if max_val == None:
+        max_val = max(vec)
+    vec_copy = vec.copy()
+    for i in range(len(vec)):
+        vec_copy[i] = vec[i] / max_val
+    return vec_copy
+
+def replace_negatives(vec):
+    return_vec = vec.copy()
+    for i in range(len(vec)):
+        return_vec[i] = abs(vec[i])
+    return return_vec
+
+
+def all_or_nothing(vec, max_val=1):
+    vec_copy = vec.copy()
+    for i in range(len(vec)):
+        if vec[i] != 0:
+            vec_copy[i] = max_val
+        else:
+            vec_copy[i] = 0
+    return vec_copy
 
 
 def clusters_to_surface( groups, size ):
@@ -35,7 +62,7 @@ def clusters_to_surface( groups, size ):
     for i in range(len(groups)):
         for point in groups[i]:
             color = colors[i]
-            surf.set_at( point.get_pos(), color )
+            surf.set_at( point.get_position(), color )
     return surf
 
 
@@ -49,7 +76,7 @@ def split_matrix_into_point_tuples( matrix ):
     return points
 
 
-def matrix_to_dbscan_point_list( matrix ):
+def matrix_to_point_list( matrix ):
     points = []
     for i in range(len(matrix)):
         for j in range(len(matrix[0])):
@@ -65,16 +92,22 @@ class ClusterPoint(object):
         self.x = x
         self.y = y
         self.grouped = False
+        self._distance_to = {}
 
-
-    def get_pos(self):
+    def get_position(self):
         return self.x, self.y
 
 
     def distance_to( self, other_point ):
-        x_diff = ( other_point.x - self.x ) * 5
-        y_diff = ( other_point.y - self.y ) * 0.1
-        return sqrt(x_diff * x_diff + y_diff * y_diff)
+        try:
+            dist = self._distance_to[other_point]
+        except KeyError:
+            x_diff = ( other_point.x - self.x ) * 5
+            y_diff = ( other_point.y - self.y ) * 0.1
+            dist = sqrt(x_diff * x_diff + y_diff * y_diff)
+            self._distance_to[ other_point ] = dist
+            other_point._distance_to[ self ] = dist
+        return dist
 
 
     def get_points_within_dist( self, points, dist ):
@@ -219,15 +252,8 @@ def get_average( iterable ):
     return total / num
 
 
-def all_or_nothing(vector, max_val=255, min_val=0, threshhold=225):
-    for i in range(len(vector)):
-        if vector[i] > threshhold:
-            vector[i] = max_val
-        else:
-            vector[i] = min_val
-
 # TODO: add support for the resizing option.
-def get_display_matrix( display, resize=True ):
+def get_display_matrix( display ):
     surface = pygame.display.get_surface()
     arr = PixelArray_to_numpy_array( pygame.PixelArray(surface) )
     return arr
@@ -256,7 +282,6 @@ def combine_groups(groups):
                         for pt in groups[j]:
                             groups[i].append(pt)
                         groups.remove(groups[j])
-                        print 'Clusters {0} and {1} combined'.format(i, j)
                         break
                 if not j < len(groups):
                     break
@@ -265,33 +290,127 @@ def combine_groups(groups):
         i += 1
 
 
-def dbscan( display ):
+def cluster_to_square_image(cluster):
+
+    padding = 10
+
+    left_most_point = cluster[0].get_position()
+    right_most_point = cluster[0].get_position() 
+    top_most_point = cluster[0].get_position()
+    bottom_most_point = cluster[0].get_position()
+
+    for point in cluster:
+        pos = point.get_position()
+        if pos[0] < left_most_point[0]:
+            left_most_point = point.get_position()
+        if pos[0] > right_most_point[0]:
+            right_most_point = point.get_position()
+        if pos[1] > bottom_most_point[1]:
+            bottom_most_point = point.get_position()
+        if pos[1] < top_most_point[1]:
+            top_most_point = point.get_position()
+
+    top_left = left_most_point[0], top_most_point[1]
+    bottom_right = right_most_point[0], bottom_most_point[1]
+    
+    # using top left as 0, -1
+    num_rows = bottom_most_point[1] - top_most_point[1]
+    num_cols = right_most_point[0] - left_most_point[0]
+
+    row_shift = -top_most_point[1]
+    col_shift = -left_most_point[0]
+    
+    if num_rows > num_cols:
+        square_size = num_rows
+        row_shift += padding / 2
+        col_shift += (padding / 2) + (num_rows - num_cols) / 2
+    else:
+        square_size = num_cols
+        row_shift += (padding / 2) + (num_cols - num_rows) / 2
+        col_shift += (padding / 2) 
+    
+    #im_array = [ [0 for col in range(square_size+padding)] \
+    #        for row in range(square_size+padding) ]
+
+    im_array = numpy.zeros( (square_size+padding, square_size+padding) )
+
+    for point in cluster:
+        pos = point.get_position()
+        x = pos[0] + col_shift
+        y = pos[1] + row_shift
+        im_array[y][x] = 255
+
+    image = Image.fromarray(im_array)
+    
+    return image    
+
+def dbscan( display, print_stuff=True ):
     # eps = 30 
     # threshhold_num = 20
     pixel_array = get_display_matrix( display )
-    print 'Pixel array extracted. Size: {0}, {1}' \
-            .format( len(pixel_array), len(pixel_array[0]) )
-    dbscan_points = matrix_to_dbscan_point_list( pixel_array ) 
-    print 'Points extracted from array. Size: {0}'.format( len(dbscan_points) )
+
+    if print_stuff: print 'Pixel array extracted. Size: {0}, {1}' \
+                        .format( len(pixel_array), len(pixel_array[0]) )
+
+    dbscan_points = matrix_to_point_list( pixel_array ) 
+
+    if print_stuff: print 'Points extracted from array. Size: {0}'.format( len(dbscan_points) )
+
     classify_points( dbscan_points, eps, threshhold_num )
-    print 'Points classified'
+    if print_stuff: print 'Points classified'
     s = len(dbscan_points)
     eliminate_noise_points( dbscan_points )
-    print 'Noise eliminated. \n\tSize before: {0}\n\tSize after: {1}'\
-            .format(s, len(dbscan_points))
+    if print_stuff: print 'Noise eliminated. \n\tSize before: {0}\n\tSize after: {1}'\
+                        .format(s, len(dbscan_points))
     core_points = get_core_points( dbscan_points ) 
     border_points = get_border_points( dbscan_points )
     connect_core_points( core_points, eps )
-    print 'Core points connected\nNum core points: {0}'.format(len(core_points))
+    if print_stuff: print 'Core points connected\nNum core points: {0}'.format(len(core_points))
     groups = group_core_points( core_points )
-    print 'Core points grouped' 
+    if print_stuff: print 'Core points grouped' 
     group_border_points( border_points, groups, eps  ) 
-    print 'Border points grouped\nNum border points: {0}'.format(len(border_points)) 
-    print 'Number of clusters: {0}'.format( len(groups) )  
-    print 'Combining clusters'
+    if print_stuff:
+        print 'Border points grouped\nNum border points: {0}'.format(len(border_points)) 
+        print 'Number of clusters: {0}'.format( len(groups) )  
+        print 'Combining clusters'
     combine_groups(groups)
-    print 'DBSCAN complete'
-    return clusters_to_surface( groups, display.get_size() )
+    if print_stuff: print 'DBSCAN complete'
+    return groups
+    
+
+def color_clusters( display ):
+    clusters = dbscan( display, print_stuff=False )
+    return clusters_to_surface( clusters, display.get_size() )
+
+def dbscan_redo( display ):
+    pixel_array = get_display_matrix( display )
+    points = matrix_to_point_list( pixel_array )
+    classify_points( points )
+
+
+def get_square_cluster_image_vectors( display, image_size ):
+    groups = dbscan( display )
+    images = []
+    surfaces = []
+    image_vectors = []
+    for group in groups:
+        images.append( cluster_to_square_image( group ) )
+    for image in images:
+        resized = image.resize( image_size, Image.ANTIALIAS )
+        vec = numpy.array(resized).ravel()
+        vec = replace_negatives(vec)
+        vec = scale_to_max_val(vec, max_val=255)
+        image_vectors.append( vec )
+    return image_vectors
+
+
+
+
+
+
+
+
+
 
 
 

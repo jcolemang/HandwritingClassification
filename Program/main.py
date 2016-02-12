@@ -4,7 +4,7 @@ import sys
 import pygame
 pygame.init()
 from classifier import Classifier
-# import dbscan
+import dbscan
 import py_dbscan
 
 import time
@@ -22,6 +22,8 @@ current = pygame.mouse.get_pos()
 save_path = '/home/coleman/Pictures/saved.bmp'
 
 
+use_c_dbscan = True
+
 
 def check_input( display, classifier):
     global prev, current, mouse_was_pressed, eraser_mode, save_path
@@ -33,17 +35,18 @@ def check_input( display, classifier):
 
             if event.key == pygame.K_RETURN:
                 print 'Enter pressed'
-                vectors = py_dbscan.get_square_cluster_image_vectors( display, (28, 28) )
-                # py_dbscan.dbscan( display )
-                # dbscan.dbscanV2( display )
-                
-                # vectors = []
 
-                # title = ''
-                for v in vectors:
-                    print classifier.predict(v)
-                    # title += str(classifier.predict(v))
-                # pygame.display.set_caption(title)
+                if use_c_dbscan:
+                    py_dbscan.dbscanV2( display )
+                else: 
+                    vectors = py_dbscan.get_square_cluster_image_vectors( display, (28, 28) )
+                    py_dbscan.dbscan( display )
+                    
+                    title = ''
+                    for v in vectors:
+                        print classifier.predict(v)
+                        title += str(classifier.predict(v))
+                    pygame.display.set_caption(title)
 
 
                 # surf = dbscan.color_clusters( display )

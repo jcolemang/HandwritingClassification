@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include "kdtree.h"
+#include "kdtree.h" // Includes dynamic_array.h
 
 #define UNDEFINED -1
 #define SAMPLE_SIZE 50
@@ -16,25 +16,109 @@ void swap(int*, int, int);
 KD_Node* find_node(KD_Node*, int*);
 void free_nodes(KD_Node*);
 void print_all_node_values_helper( KD_Node* );
-
+int get_num_in_bounds_helper(KD_Node*, int[DIMENSIONS], int[DIMENSIONS]);
+void range_search_helper( KD_Node*, DynamicArray*, int[DIMENSIONS], int[DIMENSIONS] );
 
 
 /*
  * It is pretty important that I actually do this at some point.
  */
-int**
-range_search(KD_Tree tree, int** bounds)
+DynamicArray*
+range_search(KD_Tree* tree, int lower[DIMENSIONS], int upper[DIMENSIONS])
 {
-    /* DIMENSIONS will be the length of bounds */ 
-    return NULL;
+    DynamicArray* nodes_in_bounds;
+    nodes_in_bounds = create_dynamic_array(16);
+    range_search_helper( (*tree).root, nodes_in_bounds, lower, upper );
+
+    return nodes_in_bounds;
+}
+
+
+void 
+range_search_helper(KD_Node* node, DynamicArray* arr, int lower[DIMENSIONS], int upper[DIMENSIONS])
+{
+
+    // Will only check this node if it is within bounds
+    // TODO Make sure this logic is correct
+    if ( (*node).is_a_leaf )
+    {
+        int i;
+        for (i = 0; i < DIMENSIONS; i++)
+        {
+            if ( (*node).value[i] < lower[i] || (*node).value[i] > upper[i] )
+                return;
+        }
+
+        dynamic_array_append( arr, (void*)node );
+        return;
+    }
+  
+    int dim = (*node).split_dimension;
+
+    if ( (*node).has_left_child )
+    {
+        // checking for any overlap
+        if ( (*node).split_value >= lower[dim])
+            range_search_helper( (*node).left_child, arr, lower, upper );
+    }
+
+    if ( (*node).has_right_child )
+    {
+        if ( (*node).split_value <= upper[dim] ) 
+            range_search_helper( (*node).right_child, arr, lower, upper );
+    }
+
 }
 
 
 /*
- * I think this is technically an approximation.
- * The rectangular search area makes things a bit
- * weird.
+ * 
  */
+int
+get_number_in_bounds(KD_Tree* tree, int lower[DIMENSIONS], int upper[DIMENSIONS])
+{
+    return get_num_in_bounds_helper( (*tree).root, lower, upper );
+}
+
+
+int 
+get_num_in_bounds_helper(KD_Node* node, int lower[DIMENSIONS], int upper[DIMENSIONS])
+{
+    // Will only check this node if it is within bounds
+    // TODO Make sure this logic is correct
+    if ( (*node).is_a_leaf )
+    {
+        int i;
+        for (i = 0; i < DIMENSIONS; i++)
+        {
+            if ( (*node).value[i] < lower[i] || (*node).value[i] > upper[i] )
+                return 0;
+        }
+
+        return 1;
+    }
+  
+    int num = 0;
+    int dim = (*node).split_dimension;
+
+    if ( (*node).has_left_child )
+    {
+        // checking for any overlap
+        if ( (*node).split_value >= lower[dim])
+            num += get_num_in_bounds_helper( (*node).left_child, lower, upper );
+    }
+
+    if ( (*node).has_right_child )
+    {
+        if ( (*node).split_value <= upper[dim] ) 
+            num += get_num_in_bounds_helper( (*node).right_child, lower, upper );
+    }
+
+    return num;
+}
+
+
+/*
 int*
 get_nearest_neighbor( KD_Tree* tree, int point[DIMENSIONS] )
 {
@@ -42,15 +126,64 @@ get_nearest_neighbor( KD_Tree* tree, int point[DIMENSIONS] )
 }
 
 
-/*
- *
- */
-get_nearest_neighbor_helper( KD_Node* current, int point[DIMENSIONS], int current_dimension)
+get_nearest_neighbor_helper( KD_Node* current, int point[DIMENSIONS])
 {
-    if ( (*current).has_left_child )
-    return NULL;
-}
+    // if we have a leaf we have the first candidate node
+    if ( (*current).is_a_leaf )
+    {
+        return current;
+    }
 
+    int dim = (*current).split_dimension;
+    // For a lot of the method they are interchangable but
+    // I think the distinction is important for clarity
+    KD_Node* current_best = current; 
+    KD_Node* candidate;
+    int sq_dist_to_candidate;
+    int diff;
+    int i;
+    
+    if ( point[dim] < (*current).split_value )
+    {
+        // Check the left subtree, then maybe check the right
+        if ( (*curret).has_left_child )
+            candidate = get_nearest_neighbor_helper( (*current).left_child );
+        else
+            candidate = current;
+
+        sq_dist_to_candidate = 0;
+        for (i = 0; i < DIMENSIONS; i++)
+        {
+            diff = abs( (*candidate).value[i] - point[i] );
+            sq_dist_to_candidate += diff * diff;
+        }
+
+        if ( abs((*candidate).split_value - point[dim]) < sq_dist_to_candidate &&
+                (*current).has_right_child )
+        {
+            
+        }
+            
+
+    }
+    else
+    {
+        // Check the right subtree, then maybe check the left 
+        if ( (*curret).has_right_child )
+            candidate = get_nearest_neighbor_helper( (*current).left_child );
+        else
+            candidate = current;
+
+        sq_dist_to_candidate = 0;
+        for (i = 0; i < DIMENSIONS; i++)
+        {
+            diff = abs( (*candidate).value[i] - point[i] );
+            sq_dist_to_candidate += diff * diff;
+        }
+
+    }
+}
+*/
 
 /*
  * Basically a nearest neighbor helper method.
@@ -269,8 +402,6 @@ KD_Node* construct_kd_tree_helper( int points[][DIMENSIONS], int num_points, int
     int median = get_sample_median(points, num_points, SAMPLE_SIZE, split_dimension);
 
     (*node).split_value = median;
-
-    
 
     /* Setting up split arrays */
     int left_split_points[num_points][DIMENSIONS];

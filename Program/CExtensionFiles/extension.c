@@ -3,11 +3,83 @@
 #include <stdio.h>
 #include "kdtree.h"
 
-#define NOISE 0
+#define CORE 0
 #define BORDER 1
-#define CORE 2
+#define NOISE 2
 
 
+typedef struct DBScanPoint 
+{
+    int* location;
+    int classification;
+    int num_within_threshold;
+    int visited;
+    DynamicArray* connected_points;
+
+} DBScanPoint;
+
+
+void
+destroy_DBScanPoint( DBScanPoint* point )
+{
+    destroy_dynamic_array( (*point).connected_points ); 
+}
+
+
+void
+dbscan_helper( int points[][DIMENSIONS], int num_points, 
+        int dist_threshold, int num_threshold)
+{
+    KD_Tree* tree = construct_kd_tree(points, num_points);    
+    DBScanPoint dbscan_points[num_points];
+    int lower[DIMENSIONS];
+    int upper[DIMENSIONS];
+    DynamicArray* arr;
+
+
+    // Initial pass. Getting all of the core points.
+    int i;
+    for (i = 0; i < num_points; i++)
+    {
+        lower[0] = points[i][0] - dist_threshold;
+        lower[1] = points[i][1] - dist_threshold;
+        upper[0] = points[i][0] + dist_threshold;
+        upper[1] = points[i][1] + dist_threshold;
+        arr = range_search( tree, lower, upper );
+
+        // neither of these should change so this shouldn't
+        // be a problem. Watch out for memeory though!!!
+        dbscan_points[i].location = points[i];
+
+        if ( (*arr).num_elements >= num_threshold )
+            dbscan_points[i].classification = CORE;
+        else
+            dbscan_points[i].classification = NOISE;
+
+        dbscan_points[i].connected_points = arr;
+        dbscan_points[i].num_within_threshold = (*arr).num_elements;
+        dbscan_points[i].visited = 0;
+    }
+
+    // TODO:
+    // Go through the points again.
+    // if the point is a core and hasn't been visited, put it in a new cluster
+    // go through all of its connected points, mark them as visited, 
+    // and put them in the cluster.
+    // Expand each of these nodes, doing the same to their neighbors.
+    // if the point has been visited or is not core, skip it.
+    // I will need a new method for this.
+
+    printf("Done\n");
+
+    for (i = 0; i < num_points; i++)
+        destroy_DBScanPoint( &dbscan_points[i] );
+    free_tree(tree);
+
+}
+
+
+/* Sole purpose is a wrapper function. */
 static PyObject* 
 dbscan(PyObject* self, PyObject* args)
 {
@@ -27,6 +99,7 @@ dbscan(PyObject* self, PyObject* args)
     int points[list_length][DIMENSIONS];
 
     /* Parsing the tuples in the list into pairs of integers */
+    /* Quite a lot of overhead, but it is better than using python. I think. */
     int x, y, num_points = 0;
     PyObject* tuple;
     for (i = 0; i < list_length; i++)
@@ -42,24 +115,15 @@ dbscan(PyObject* self, PyObject* args)
         points[i][1] = y;
         num_points++;
     }
-    
-    /* Now lets actually do some scanning */
-    KD_Tree* tree = construct_kd_tree(points, num_points);    
 
-    int pt_to_find[] = {100, 100};
+    /* The actual scanning */
+    dbscan_helper( points, num_points, threshold_dist, threshold_num );
 
-    //print_all_node_values(tree);
-
-    int* nearest_neighbor = get_nearest_neighbor( tree,  pt_to_find );
-    printf("(%d, %d) is the nearest to (%d, %d)\n", 
-            nearest_neighbor[0], nearest_neighbor[1], pt_to_find[0], pt_to_find[1]);
-
-    free_tree(tree);
     return Py_BuildValue("i", 0);
 }
 
 
-static PyMethodDef DBScanMethods[] =
+static PyMethodDef ExtensionMethods[] =
 {
     {"dbscan", dbscan, METH_VARARGS, "Run dbscan"},
     {NULL, NULL, 0, NULL}
@@ -69,7 +133,7 @@ static PyMethodDef DBScanMethods[] =
 PyMODINIT_FUNC
 initdbscan(void)
 {
-    (void) Py_InitModule("dbscan", DBScanMethods);
+    (void) Py_InitModule("dbscan", ExtensionMethods);
 }
 
     

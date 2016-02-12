@@ -1,4 +1,4 @@
-
+#include "dynamic_array.h"
 #define DIMENSIONS 2
 
 typedef struct Point
@@ -29,7 +29,7 @@ typedef struct KD_Tree
 
 KD_Tree* construct_kd_tree(int[][DIMENSIONS], int);
 
-int** range_search(KD_Tree, int**);
+DynamicArray* range_search(KD_Tree*, int[DIMENSIONS], int[DIMENSIONS]);
 
 int* get_nearest_neighbor(KD_Tree*, int[DIMENSIONS]);
 
@@ -37,5 +37,5 @@ void free_tree(KD_Tree*);
 
 void print_all_node_values( KD_Tree* );
 
-
+int get_number_in_bounds( KD_Tree*, int[DIMENSIONS], int[DIMENSIONS] );
 

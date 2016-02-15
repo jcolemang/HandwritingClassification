@@ -1,11 +1,27 @@
-#include "dynamic_array.h"
-#define DIMENSIONS 2
+#ifndef GLOBAL_H
+    #include "global.h"
+    #define GLOBAL_H 0
+#endif
 
-typedef struct Point
-{
-    int x;
-    int y;
-} Point;
+#ifndef STDIO_H
+    #include <stdio.h>
+    #define STDIO_H 0
+#endif
+
+#ifndef STDLIB_H
+    #include <stdlib.h>
+    #define STDLIB_H 0
+#endif
+
+#ifndef DYNAMIC_ARRAY_H
+    #include "dynamic_array.h"
+    #define DYNAMIC_ARRAY_H 0
+#endif
+
+#ifndef STRING_H
+    #include <string.h>
+    #define STRING_H
+#endif
 
 
 typedef struct KD_Node
@@ -17,7 +33,8 @@ typedef struct KD_Node
     int has_right_child;
     struct KD_Node* left_child;
     struct KD_Node* right_child;
-    int* value;
+    void* value;
+    int* location;
 } KD_Node;
 
 
@@ -38,4 +55,16 @@ void free_tree(KD_Tree*);
 void print_all_node_values( KD_Tree* );
 
 int get_number_in_bounds( KD_Tree*, int[DIMENSIONS], int[DIMENSIONS] );
+
+KD_Node* find_node( KD_Tree*, int[DIMENSIONS] );
+
+
+
+
+
+
+
+
+
+
 

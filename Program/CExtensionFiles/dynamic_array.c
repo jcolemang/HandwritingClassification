@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "dynamic_array.h"
 
 int double_size( DynamicArray* );
@@ -18,8 +19,15 @@ create_dynamic_array( int start_capacity )
 
 
 void
-destroy_dynamic_array( DynamicArray* arr )
+destroy_dynamic_array( DynamicArray* arr, int free_elements)
 {
+    if (free_elements == FREE_ELEMENTS)
+    {
+        int i;
+        for (i = 0; i < (*arr).num_elements; i++)
+            free((*arr)._elements[i]); 
+    }
+
     free((*arr)._elements);
     free(arr);
 }
@@ -41,10 +49,13 @@ dynamic_array_append( DynamicArray* arr, void* thing )
 
 
 void*
-get_element( DynamicArray* arr, int index )
+dynamic_array_get_element( DynamicArray* arr, int index )
 {
     if (index >= (*arr).num_elements || index < 0 )
+    {
+        printf("OUT OF BOUNDS\n");
         return NULL;
+    }
 
     return (*arr)._elements[index];
 }

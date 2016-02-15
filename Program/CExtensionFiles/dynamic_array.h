@@ -1,4 +1,7 @@
 
+#define FREE_ELEMENTS 0
+#define LEAVE_ELEMENTS 1
+
 typedef struct DynamicArray 
 {
     unsigned int num_elements;
@@ -8,9 +11,9 @@ typedef struct DynamicArray
 
 int dynamic_array_append( DynamicArray*, void* );
 
-void* get_element(DynamicArray*, int);
+void* dynamic_array_get_element(DynamicArray*, int);
 
 DynamicArray* create_dynamic_array(int);
 
-void destroy_dynamic_array(DynamicArray*);
+void destroy_dynamic_array(DynamicArray*, int);
 

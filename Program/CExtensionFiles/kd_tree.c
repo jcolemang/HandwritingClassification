@@ -1,8 +1,6 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include "kdtree.h" // Includes dynamic_array.h
+#include "kd_tree.h"
 
-#define UNDEFINED -1
+#define UNDEFINED -69
 #define SAMPLE_SIZE 50
 #define LEFT 0
 #define RIGHT 1
@@ -13,11 +11,71 @@ int get_sample_median(int[][DIMENSIONS], int, int, int);
 void insertion_sort(int*, int);
 void print_array(int*, int);
 void swap(int*, int, int);
-KD_Node* find_node(KD_Node*, int*);
 void free_nodes(KD_Node*);
 void print_all_node_values_helper( KD_Node* );
 int get_num_in_bounds_helper(KD_Node*, int[DIMENSIONS], int[DIMENSIONS]);
 void range_search_helper( KD_Node*, DynamicArray*, int[DIMENSIONS], int[DIMENSIONS] );
+KD_Node* find_node_helper(KD_Node*, int[DIMENSIONS]);
+
+
+KD_Node*
+find_node(KD_Tree* tree, int location[DIMENSIONS])
+{
+    return find_node_helper( (*tree).root, location ); 
+}
+
+
+KD_Node*
+find_node_helper(KD_Node* node, int loc[DIMENSIONS])
+{
+    if ( (*node).is_a_leaf )
+        return node;
+
+    int dim = (*node).split_dimension;
+
+    if ( loc[dim] < (*node).split_value)
+    {
+        if ( (*node).has_left_child )
+            return find_node_helper( (*node).left_child, loc ); 
+    }
+
+    if ( (*node).has_right_child )
+        return find_node_helper( (*node).right_child, loc ); 
+
+    printf("PROBLEM\n");
+    return NULL;
+
+
+}
+
+
+/*
+ * A poor attempt at something vaguely generic.
+ * The idea is you could just edit the header 
+ * file to change what gets put in the value of 
+ * the node.
+ *
+ * This is called at the very end, so you
+ * have access to the location and everything
+ * else in the KD_Node struct.
+ */
+void
+construct_kd_node_value( KD_Node* node )
+{
+    int i;
+    DBScanPoint* dbpt;
+    dbpt = malloc( sizeof(DBScanPoint) );
+
+    for (i = 0; i < DIMENSIONS; i++)
+        (*dbpt).location[i] = (*node).location[i]; 
+
+    (*dbpt).classification = NOISE;
+    (*dbpt).num_in_threshold = -1;
+    (*dbpt).has_been_visited = 0;
+    (*dbpt).points_in_threshold = NULL;
+
+    (*node).value = dbpt;
+}
 
 
 /*
@@ -29,7 +87,6 @@ range_search(KD_Tree* tree, int lower[DIMENSIONS], int upper[DIMENSIONS])
     DynamicArray* nodes_in_bounds;
     nodes_in_bounds = create_dynamic_array(16);
     range_search_helper( (*tree).root, nodes_in_bounds, lower, upper );
-
     return nodes_in_bounds;
 }
 
@@ -37,19 +94,17 @@ range_search(KD_Tree* tree, int lower[DIMENSIONS], int upper[DIMENSIONS])
 void 
 range_search_helper(KD_Node* node, DynamicArray* arr, int lower[DIMENSIONS], int upper[DIMENSIONS])
 {
-
-    // Will only check this node if it is within bounds
-    // TODO Make sure this logic is correct
     if ( (*node).is_a_leaf )
     {
         int i;
         for (i = 0; i < DIMENSIONS; i++)
         {
-            if ( (*node).value[i] < lower[i] || (*node).value[i] > upper[i] )
+            if ( (*node).location[i] < lower[i] || (*node).location[i] > upper[i] )
                 return;
         }
 
-        dynamic_array_append( arr, (void*)node );
+        dynamic_array_append( arr, (*node).value);
+        
         return;
     }
   
@@ -84,14 +139,12 @@ get_number_in_bounds(KD_Tree* tree, int lower[DIMENSIONS], int upper[DIMENSIONS]
 int 
 get_num_in_bounds_helper(KD_Node* node, int lower[DIMENSIONS], int upper[DIMENSIONS])
 {
-    // Will only check this node if it is within bounds
-    // TODO Make sure this logic is correct
     if ( (*node).is_a_leaf )
     {
         int i;
         for (i = 0; i < DIMENSIONS; i++)
         {
-            if ( (*node).value[i] < lower[i] || (*node).value[i] > upper[i] )
+            if ( (*node).location[i] < lower[i] || (*node).location[i] > upper[i] )
                 return 0;
         }
 
@@ -118,108 +171,6 @@ get_num_in_bounds_helper(KD_Node* node, int lower[DIMENSIONS], int upper[DIMENSI
 }
 
 
-/*
-int*
-get_nearest_neighbor( KD_Tree* tree, int point[DIMENSIONS] )
-{
-    return (*find_node( (*tree).root, point )).value;
-}
-
-
-get_nearest_neighbor_helper( KD_Node* current, int point[DIMENSIONS])
-{
-    // if we have a leaf we have the first candidate node
-    if ( (*current).is_a_leaf )
-    {
-        return current;
-    }
-
-    int dim = (*current).split_dimension;
-    // For a lot of the method they are interchangable but
-    // I think the distinction is important for clarity
-    KD_Node* current_best = current; 
-    KD_Node* candidate;
-    int sq_dist_to_candidate;
-    int diff;
-    int i;
-    
-    if ( point[dim] < (*current).split_value )
-    {
-        // Check the left subtree, then maybe check the right
-        if ( (*curret).has_left_child )
-            candidate = get_nearest_neighbor_helper( (*current).left_child );
-        else
-            candidate = current;
-
-        sq_dist_to_candidate = 0;
-        for (i = 0; i < DIMENSIONS; i++)
-        {
-            diff = abs( (*candidate).value[i] - point[i] );
-            sq_dist_to_candidate += diff * diff;
-        }
-
-        if ( abs((*candidate).split_value - point[dim]) < sq_dist_to_candidate &&
-                (*current).has_right_child )
-        {
-            
-        }
-            
-
-    }
-    else
-    {
-        // Check the right subtree, then maybe check the left 
-        if ( (*curret).has_right_child )
-            candidate = get_nearest_neighbor_helper( (*current).left_child );
-        else
-            candidate = current;
-
-        sq_dist_to_candidate = 0;
-        for (i = 0; i < DIMENSIONS; i++)
-        {
-            diff = abs( (*candidate).value[i] - point[i] );
-            sq_dist_to_candidate += diff * diff;
-        }
-
-    }
-}
-*/
-
-/*
- * Basically a nearest neighbor helper method.
- */
-KD_Node*
-find_node( KD_Node* current, int* val_to_find )
-{
-    if ( (*current).is_a_leaf == 1)
-    {
-        return current;
-    }
-
-    if ( (*current).is_a_leaf != 0)
-        printf("Problem. Leaf val: %d\n", (*current).is_a_leaf);
-
-    int val = (*current).split_value;
-    int split_dimension = (*current).split_dimension;
-
-    if ( val_to_find[split_dimension] < val )
-    {
-        if ( (*current).has_left_child )
-             return find_node( (*current).left_child, val_to_find );
-        else if ( (*current).has_right_child )
-             return find_node( (*current).right_child, val_to_find );
-    }
-    else
-    {
-        if ( (*current).has_right_child )
-            return find_node( (*current).right_child, val_to_find );
-        else if ( (*current).has_left_child )
-            return find_node( (*current).left_child, val_to_find );
-    }
-    
-    // This should never happen.
-    return NULL;
-}
 
 /* 
  * Basically exclusively for sanity checks. This should find most
@@ -237,7 +188,7 @@ print_all_node_values_helper( KD_Node* node )
 {
     if ( (*node).is_a_leaf )
     {
-        printf("(%d, %d)\n", (*node).value[0], (*node).value[1]);
+        printf("(%d, %d)\n", (*node).location[0], (*node).location[1]);
     }
     if ( (*node).has_left_child )
     {
@@ -298,8 +249,12 @@ free_nodes(KD_Node* head)
     if ( (*head).has_right_child )
         free_nodes( (*head).right_child );
 
-    free( (*head).value );
+    free( (*head).location );
     free(head);
+
+    // Note that the value is not freed. This is 
+    // dumb but really convenient for this program
+    // and I'm running out of time.
 }
 
 
@@ -388,9 +343,10 @@ KD_Node* construct_kd_tree_helper( int points[][DIMENSIONS], int num_points, int
         (*node).has_right_child = 0;
         (*node).left_child = NULL;
         (*node).right_child = NULL;
-        (*node).value = malloc( DIMENSIONS * sizeof(int) );
-        for (i = 0; i < DIMENSIONS; i++)
-            (*node).value[i] = points[0][i];
+        (*node).location = malloc( DIMENSIONS * sizeof(int) );
+        memcpy( (*node).location, points[0], DIMENSIONS * sizeof(int) ) ;
+        construct_kd_node_value(node);
+        //printf("Point: (%d, %d)    Copied: (%d, %d)\n", points[0][0], points[0][1], (*node).location[0], (*node).location[1] );
         return node;
     }
 
@@ -479,7 +435,7 @@ KD_Node* construct_kd_tree_helper( int points[][DIMENSIONS], int num_points, int
     
     if ( !(*node).is_a_leaf )
     {
-        (*node).value = NULL;
+        (*node).location = NULL;
     }
 
     return node;

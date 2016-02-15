@@ -19,6 +19,7 @@ import pdb
 import dbscan as cdbscan # this should be the c module
 from PIL import Image
 from sys import exit
+import time
 
 Noise = 0
 Border = 1
@@ -271,6 +272,7 @@ def get_display_vector( display, resize=True ):
     return vec
 """
 
+
 def combine_groups(groups):
     i = 0
     while i < len(groups):
@@ -296,21 +298,41 @@ def cluster_to_square_image(cluster):
 
     padding = 10
 
-    left_most_point = cluster[0].get_position()
-    right_most_point = cluster[0].get_position() 
-    top_most_point = cluster[0].get_position()
-    bottom_most_point = cluster[0].get_position()
 
-    for point in cluster:
-        pos = point.get_position()
-        if pos[0] < left_most_point[0]:
-            left_most_point = point.get_position()
-        if pos[0] > right_most_point[0]:
-            right_most_point = point.get_position()
-        if pos[1] > bottom_most_point[1]:
-            bottom_most_point = point.get_position()
-        if pos[1] < top_most_point[1]:
-            top_most_point = point.get_position()
+    # the c version.
+    if type(cluster[0]) == tuple:
+        left_most_point = cluster[0]
+        right_most_point = cluster[0]
+        top_most_point = cluster[0]
+        bottom_most_point = cluster[0]
+
+        for point in cluster:
+            if point[0] < left_most_point[0]:
+                left_most_point = point
+            if point[0] > right_most_point[0]:
+                right_most_point = point
+            if point[1] > bottom_most_point[1]:
+                bottom_most_point = point
+            if point[1] < top_most_point[1]:
+                top_most_point = point
+
+    # the python version.
+    else:
+        left_most_point = cluster[0].get_position()
+        right_most_point = cluster[0].get_position() 
+        top_most_point = cluster[0].get_position()
+        bottom_most_point = cluster[0].get_position()
+
+        for point in cluster:
+            pos = point.get_position()
+            if pos[0] < left_most_point[0]:
+                left_most_point = point.get_position()
+            if pos[0] > right_most_point[0]:
+                right_most_point = point.get_position()
+            if pos[1] > bottom_most_point[1]:
+                bottom_most_point = point.get_position()
+            if pos[1] < top_most_point[1]:
+                top_most_point = point.get_position()
 
     top_left = left_most_point[0], top_most_point[1]
     bottom_right = right_most_point[0], bottom_most_point[1]
@@ -336,11 +358,18 @@ def cluster_to_square_image(cluster):
 
     im_array = numpy.zeros( (square_size+padding, square_size+padding) )
 
-    for point in cluster:
-        pos = point.get_position()
-        x = pos[0] + col_shift
-        y = pos[1] + row_shift
-        im_array[y][x] = 255
+    if type(cluster[0]) == tuple:
+        for point in cluster:
+            x = point[0] + col_shift
+            y = point[1] + row_shift
+            im_array[y][x] = 255
+
+    else:
+        for point in cluster:
+            pos = point.get_position()
+            x = pos[0] + col_shift
+            y = pos[1] + row_shift
+            im_array[y][x] = 255
 
     image = Image.fromarray(im_array)
     
@@ -349,26 +378,44 @@ def cluster_to_square_image(cluster):
 def dbscan( display, print_stuff=True ):
     # eps = 30 
     # threshhold_num = 20
+    t = time.time()
     pixel_array = get_display_matrix( display )
+    print 'get display matrix time: {0:.2f}'.format( time.time() - t )
 
     if print_stuff: print 'Pixel array extracted. Size: {0}, {1}' \
                         .format( len(pixel_array), len(pixel_array[0]) )
 
+    t = time.time()
     dbscan_points = matrix_to_point_list( pixel_array ) 
+    print 'matrix to point list time: {0:.2f}'.format( time.time() - t )
 
     if print_stuff: print 'Points extracted from array. Size: {0}'.format( len(dbscan_points) )
 
+    t = time.time()
     classify_points( dbscan_points, eps, threshhold_num )
+    print 'classifying points time: {0:.2f}'.format( time.time() - t )
+
     if print_stuff: print 'Points classified'
     s = len(dbscan_points)
+
+    t = time.time()
     eliminate_noise_points( dbscan_points )
+    print 'eliminating noise time: {0:.2f}'.format( time.time() - t )
+
     if print_stuff: print 'Noise eliminated. \n\tSize before: {0}\n\tSize after: {1}'\
                         .format(s, len(dbscan_points))
     core_points = get_core_points( dbscan_points ) 
     border_points = get_border_points( dbscan_points )
+
+    t = time.time()
     connect_core_points( core_points, eps )
+    print 'connecting points time: {0:.2f}'.format( time.time() - t )
+
     if print_stuff: print 'Core points connected\nNum core points: {0}'.format(len(core_points))
+    t = time.time()
     groups = group_core_points( core_points )
+    print 'grouping points time: {0:.2f}'.format( time.time() - t )
+
     if print_stuff: print 'Core points grouped' 
     group_border_points( border_points, groups, eps  ) 
     if print_stuff:
@@ -377,6 +424,7 @@ def dbscan( display, print_stuff=True ):
         print 'Combining clusters'
     combine_groups(groups)
     if print_stuff: print 'DBSCAN complete'
+    print type(groups)
     return groups
     
 
@@ -387,10 +435,11 @@ def dbscanV2( display ):
     points = []
     for i in range(len(pt_locations[0])):
         points.append( (pt_locations[0][i], pt_locations[1][i]) )
-    cdbscan.dbscan( points, 5, 10 )
+    clusters = cdbscan.dbscan( points, 1, 1 )
+    #    for cluster in clusters:
+    #        print cluster
+    return clusters
     
-
-
 
 def color_clusters( display ):
     clusters = dbscan( display, print_stuff=False )
@@ -400,6 +449,22 @@ def dbscan_redo( display ):
     pixel_array = get_display_matrix( display )
     points = matrix_to_point_list( pixel_array )
     classify_points( points )
+
+
+def c_classify_image_digits( display, image_size ):
+    groups = dbscanV2( display )
+    images = []
+    surfaces = []
+    image_vectors = []
+    for group in groups:
+        images.append( cluster_to_square_image( group ) )
+    for image in images:
+        resized = image.resize( image_size, Image.ANTIALIAS )
+        vec = numpy.array(resized).ravel()
+        vec = replace_negatives(vec)
+        vec = scale_to_max_val(vec, max_val=255)
+        image_vectors.append( vec )
+    return image_vectors
 
 
 def get_square_cluster_image_vectors( display, image_size ):

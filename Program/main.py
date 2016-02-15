@@ -37,16 +37,15 @@ def check_input( display, classifier):
                 print 'Enter pressed'
 
                 if use_c_dbscan:
-                    py_dbscan.dbscanV2( display )
+                    vectors = py_dbscan.c_classify_image_digits( display, image_size )
                 else: 
-                    vectors = py_dbscan.get_square_cluster_image_vectors( display, (28, 28) )
-                    py_dbscan.dbscan( display )
+                    vectors = py_dbscan.get_square_cluster_image_vectors( display, image_size )
                     
-                    title = ''
-                    for v in vectors:
-                        print classifier.predict(v)
-                        title += str(classifier.predict(v))
-                    pygame.display.set_caption(title)
+                title = ''
+                for v in vectors:
+                    print classifier.predict(v)
+                    title += str(classifier.predict(v))
+                pygame.display.set_caption(title)
 
 
                 # surf = dbscan.color_clusters( display )
@@ -99,11 +98,11 @@ def exit_application():
 
 def main():
     
+    classifier = Classifier()
     background_color = white
     display = pygame.display.set_mode(size)
     display.fill(background_color)
     clock = pygame.time.Clock()
-    classifier = Classifier()
 
     while True:
         clock.tick(60)

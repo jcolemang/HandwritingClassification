@@ -49,6 +49,11 @@ dbscan( int points[][DIMENSIONS], int num_points,
         (*dbscan_points[i]).points_in_threshold = arr;
         (*dbscan_points[i]).num_in_threshold = (*arr).num_elements;
 
+        if ( (*dbscan_points[i]).num_in_threshold >= num_threshold)
+            (*dbscan_points[i]).classification = CORE;
+        else
+            (*dbscan_points[i]).classification = NOISE;
+
     }
     
     free_tree(tree);
@@ -70,12 +75,12 @@ dbscan( int points[][DIMENSIONS], int num_points,
 
     for (i = 0; i < num_points; ++i)
     {
-        if ( !(*dbscan_points[i]).has_been_visited )
+        if ( !(*dbscan_points[i]).has_been_visited 
+                && (*dbscan_points[i]).classification == CORE )
         {
             new_cluster = create_dynamic_array(256);
-            //printf("Call with point (%d, %d)\n", (*dbscan_points[i]).location[0], (*dbscan_points[i]).location[1]);
-            get_points_connected_to( dbscan_points[i], new_cluster ); 
             dynamic_array_append( clusters, new_cluster );
+            get_points_connected_to( dbscan_points[i], new_cluster ); 
         }
 
         // otherwise do nothing. Its been taken care of.
@@ -109,11 +114,13 @@ get_points_connected_to( DBScanPoint* point, DynamicArray* cluster )
         if ( !(*element).has_been_visited )
         {
             (*element).has_been_visited = 1;
-
-            //printf("Adding (%d, %d) to cluster.\n", (*element).location[0], (*element).location[1]);
-
             dynamic_array_append( cluster, element );
-            get_points_connected_to( element, cluster );
+
+            // This implicitly removes the noise. The lines
+            // above add the border points.
+            if ( (*element).classification == CORE )
+                get_points_connected_to( element, cluster );
+
         }
         else
         {

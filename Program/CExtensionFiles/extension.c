@@ -54,7 +54,7 @@ dbscan_wrapper(PyObject* self, PyObject* args)
     int k;
     DynamicArray* cluster;
     PyObject* py_clusters = PyList_New( (*clusters).num_elements );
-    Py_INCREF(py_clusters);
+    //Py_INCREF(py_clusters);
     PyObject* py_cluster;
     PyObject* pt;
     DBScanPoint* element;
@@ -63,12 +63,12 @@ dbscan_wrapper(PyObject* self, PyObject* args)
     {
         cluster = dynamic_array_get_element( clusters, i );
         py_cluster = PyList_New( (*cluster).num_elements );
-        Py_INCREF(py_cluster);
+        //Py_INCREF(py_cluster);
 
         for (j = 0; j < (*cluster).num_elements; j++ )
         {
             pt = PyTuple_New(DIMENSIONS);             
-            Py_INCREF(pt);
+            //Py_INCREF(pt);
             element = dynamic_array_get_element(cluster, j);
 
             for (k = 0; k < DIMENSIONS; k++)

@@ -2,3 +2,4 @@
 build/
 *.pyc
 *.ipynb
+*.so

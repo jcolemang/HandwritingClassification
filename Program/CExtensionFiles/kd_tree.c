@@ -18,6 +18,13 @@ void range_search_helper( KD_Node*, DynamicArray*, int[DIMENSIONS], int[DIMENSIO
 KD_Node* find_node_helper(KD_Node*, int[DIMENSIONS]);
 
 
+int
+get_num_leaves( KD_Tree* tree )
+{
+    return (*(*tree).root).subleaves;
+}
+
+
 KD_Node*
 find_node(KD_Tree* tree, int location[DIMENSIONS])
 {
@@ -244,10 +251,14 @@ void
 free_nodes(KD_Node* head)
 {
     if ( (*head).has_left_child )
+    {
         free_nodes( (*head).left_child );
+    }
 
     if ( (*head).has_right_child )
+    {
         free_nodes( (*head).right_child );
+    }
 
     free( (*head).location );
     free(head);
@@ -320,6 +331,7 @@ KD_Tree* construct_kd_tree(int points[][DIMENSIONS], int num_points)
     KD_Tree* tree = malloc(sizeof(KD_Tree));
     (*tree).num_dimensions = DIMENSIONS;
     (*tree).root = construct_kd_tree_helper(points, num_points, 0);
+    (*tree).leaves = (*(*tree).root).subleaves;
     return tree;
 }
 
@@ -346,6 +358,7 @@ KD_Node* construct_kd_tree_helper( int points[][DIMENSIONS], int num_points, int
         (*node).location = malloc( DIMENSIONS * sizeof(int) );
         memcpy( (*node).location, points[0], DIMENSIONS * sizeof(int) ) ;
         construct_kd_node_value(node);
+        (*node).subleaves = 1;
         //printf("Point: (%d, %d)    Copied: (%d, %d)\n", points[0][0], points[0][1], (*node).location[0], (*node).location[1] );
         return node;
     }
@@ -409,11 +422,14 @@ KD_Node* construct_kd_tree_helper( int points[][DIMENSIONS], int num_points, int
         
     int new_split_dimension = (split_dimension + 1) % DIMENSIONS;
 
+    (*node).subleaves = 0;
+
     if ( num_left_points > 0 ) 
     {
         (*node).has_left_child = 1;
         (*node).left_child = construct_kd_tree_helper(
                 left_split_points, num_left_points, new_split_dimension);
+        (*node).subleaves += (*(*node).left_child).subleaves;
     }
     else
     {
@@ -426,6 +442,7 @@ KD_Node* construct_kd_tree_helper( int points[][DIMENSIONS], int num_points, int
         (*node).has_right_child = 1;
         (*node).right_child = construct_kd_tree_helper(
                 right_split_points, num_right_points, new_split_dimension);
+        (*node).subleaves += (*(*node).right_child).subleaves;
     }
     else
     {

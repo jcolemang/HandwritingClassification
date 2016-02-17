@@ -22,7 +22,8 @@ current = pygame.mouse.get_pos()
 save_path = '/home/coleman/Pictures/saved.bmp'
 
 
-use_c_dbscan = True
+time_both = False 
+use_c_dbscan = False
 
 
 def check_input( display, classifier):
@@ -36,17 +37,32 @@ def check_input( display, classifier):
             if event.key == pygame.K_RETURN:
                 print 'Enter pressed'
 
-                if use_c_dbscan:
+                if time_both:
+                    c_start = time.time()
+                    vectors = py_dbscan.c_classify_image_digits( display, image_size )
+                    c_time = time.time() - c_start
+
+                    python_start = time.time()
+                    py_dbscan.get_square_cluster_image_vectors( display, image_size )
+                    python_time = time.time() - python_start
+                
+                elif use_c_dbscan:
                     vectors = py_dbscan.c_classify_image_digits( display, image_size )
                 else: 
                     vectors = py_dbscan.get_square_cluster_image_vectors( display, image_size )
+
                     
                 title = ''
                 for v in vectors:
-                    print classifier.predict(v)
-                    title += str(classifier.predict(v))
+                    title += str(classifier.predict(v)[0])
                 pygame.display.set_caption(title)
 
+                print '\n\nPrediction: {0}'.format(title)
+                if time_both:
+                    print 'Python time: {0:.4f}\nC time: {1:.4f}\nPython/C: {2:0.4f}\n\n'\
+                            .format(python_time, c_time, python_time/c_time)
+                else:
+                    print '\n\n'
 
                 # surf = dbscan.color_clusters( display )
                 # display.blit( surf, (0, 0) )

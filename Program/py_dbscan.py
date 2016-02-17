@@ -294,6 +294,7 @@ def combine_groups(groups):
         i += 1
 
 
+
 def cluster_to_square_image(cluster):
 
     padding = 10
@@ -375,32 +376,28 @@ def cluster_to_square_image(cluster):
     
     return image    
 
-def dbscan( display, print_stuff=True ):
+def dbscan( display, print_stuff=False ):
     # eps = 30 
     # threshhold_num = 20
     t = time.time()
     pixel_array = get_display_matrix( display )
-    print 'get display matrix time: {0:.2f}'.format( time.time() - t )
 
     if print_stuff: print 'Pixel array extracted. Size: {0}, {1}' \
                         .format( len(pixel_array), len(pixel_array[0]) )
 
     t = time.time()
     dbscan_points = matrix_to_point_list( pixel_array ) 
-    print 'matrix to point list time: {0:.2f}'.format( time.time() - t )
 
     if print_stuff: print 'Points extracted from array. Size: {0}'.format( len(dbscan_points) )
 
     t = time.time()
     classify_points( dbscan_points, eps, threshhold_num )
-    print 'classifying points time: {0:.2f}'.format( time.time() - t )
 
     if print_stuff: print 'Points classified'
     s = len(dbscan_points)
 
     t = time.time()
     eliminate_noise_points( dbscan_points )
-    print 'eliminating noise time: {0:.2f}'.format( time.time() - t )
 
     if print_stuff: print 'Noise eliminated. \n\tSize before: {0}\n\tSize after: {1}'\
                         .format(s, len(dbscan_points))
@@ -409,12 +406,10 @@ def dbscan( display, print_stuff=True ):
 
     t = time.time()
     connect_core_points( core_points, eps )
-    print 'connecting points time: {0:.2f}'.format( time.time() - t )
 
     if print_stuff: print 'Core points connected\nNum core points: {0}'.format(len(core_points))
     t = time.time()
     groups = group_core_points( core_points )
-    print 'grouping points time: {0:.2f}'.format( time.time() - t )
 
     if print_stuff: print 'Core points grouped' 
     group_border_points( border_points, groups, eps  ) 
@@ -424,7 +419,6 @@ def dbscan( display, print_stuff=True ):
         print 'Combining clusters'
     combine_groups(groups)
     if print_stuff: print 'DBSCAN complete'
-    print type(groups)
     return groups
     
 
@@ -445,27 +439,6 @@ def color_clusters( display ):
     clusters = dbscan( display, print_stuff=False )
     return clusters_to_surface( clusters, display.get_size() )
 
-def dbscan_redo( display ):
-    pixel_array = get_display_matrix( display )
-    points = matrix_to_point_list( pixel_array )
-    classify_points( points )
-
-
-def c_classify_image_digits( display, image_size ):
-    groups = dbscanV2( display )
-    images = []
-    surfaces = []
-    image_vectors = []
-    for group in groups:
-        images.append( cluster_to_square_image( group ) )
-    for image in images:
-        resized = image.resize( image_size, Image.ANTIALIAS )
-        vec = numpy.array(resized).ravel()
-        vec = replace_negatives(vec)
-        vec = scale_to_max_val(vec, max_val=255)
-        image_vectors.append( vec )
-    return image_vectors
-
 
 def get_square_cluster_image_vectors( display, image_size ):
     groups = dbscan( display )
@@ -483,11 +456,21 @@ def get_square_cluster_image_vectors( display, image_size ):
     return image_vectors
 
 
-
-
-
-
-
+# this is the 'Do everything' method for classifying with c
+def c_classify_image_digits( display, image_size ):
+    groups = dbscanV2( display )
+    images = []
+    surfaces = []
+    image_vectors = []
+    for group in groups:
+        images.append( cluster_to_square_image( group ) )
+    for image in images:
+        resized = image.resize( image_size, Image.ANTIALIAS )
+        vec = numpy.array(resized).ravel()
+        vec = replace_negatives(vec)
+        vec = scale_to_max_val(vec, max_val=255)
+        image_vectors.append( vec )
+    return image_vectors
 
 
 

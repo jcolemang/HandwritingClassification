@@ -35,6 +35,7 @@ typedef struct KD_Node
     struct KD_Node* right_child;
     void* value;
     int* location;
+    int subleaves;
 } KD_Node;
 
 
@@ -42,6 +43,7 @@ typedef struct KD_Tree
 {
     KD_Node* root;
     int num_dimensions;
+    int leaves;
 } KD_Tree;
 
 KD_Tree* construct_kd_tree(int[][DIMENSIONS], int);
@@ -57,6 +59,8 @@ void print_all_node_values( KD_Tree* );
 int get_number_in_bounds( KD_Tree*, int[DIMENSIONS], int[DIMENSIONS] );
 
 KD_Node* find_node( KD_Tree*, int[DIMENSIONS] );
+
+int get_num_leaves( KD_Tree* tree );
 
 
 

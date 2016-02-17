@@ -28,8 +28,46 @@ destroy_dynamic_array( DynamicArray* arr, int free_elements)
             free((*arr)._elements[i]); 
     }
 
+    // freeing element pointers
     free((*arr)._elements);
-    free(arr);
+}
+
+
+void 
+destroy_n_nested_dynamic_array( DynamicArray* arr, int num_nested, int free_elements )
+{
+    int j;
+    if ( num_nested == 1 && free_elements == FREE_ELEMENTS )
+    {
+        for ( j = 0; j < (*arr).num_elements; j++ )
+        {
+            free( (*arr)._elements[j] );
+        }
+
+        //free(arr);
+        return;
+    }
+
+    DynamicArray* element;
+    for (j = 0; j < (*arr).num_elements; j++ )
+    {
+        element = dynamic_array_get_element( arr, j );
+        if (element == NULL)
+            printf("Might want to look at this.\n");
+        else
+        {
+            destroy_n_nested_dynamic_array( element, num_nested-1, free_elements );
+            //free(element);
+            //free(arr);
+        }
+
+        
+    }
+        
+    //printf("asd;flkj\n");
+    //free( (*arr)._elements );
+
+
 }
 
 

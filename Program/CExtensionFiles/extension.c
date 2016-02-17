@@ -25,8 +25,6 @@ dbscan_wrapper(PyObject* self, PyObject* args)
     int list_length = PyList_Size(list);
     int points[list_length][DIMENSIONS];
 
-    printf("Num points: %d\n", list_length);
-
     /* Parsing the tuples in the list into pairs of integers */
     /* Quite a lot of overhead, but it is better than using python. I think. */
     int x, y, num_points = 0;
@@ -53,22 +51,22 @@ dbscan_wrapper(PyObject* self, PyObject* args)
     int j;
     int k;
     DynamicArray* cluster;
-    PyObject* py_clusters = PyList_New( (*clusters).num_elements );
-    //Py_INCREF(py_clusters);
+    // See below for why this is - 1
+    PyObject* py_clusters = PyList_New( (*clusters).num_elements - 1 );
     PyObject* py_cluster;
     PyObject* pt;
     DBScanPoint* element;
 
-    for (i = 0; i < (*clusters).num_elements; i++)
+    // I use element 0 to store all the elements to make it 
+    // easy to free them.
+    for (i = 1; i < (*clusters).num_elements; i++)
     {
         cluster = dynamic_array_get_element( clusters, i );
         py_cluster = PyList_New( (*cluster).num_elements );
-        //Py_INCREF(py_cluster);
 
         for (j = 0; j < (*cluster).num_elements; j++ )
         {
             pt = PyTuple_New(DIMENSIONS);             
-            //Py_INCREF(pt);
             element = dynamic_array_get_element(cluster, j);
 
             for (k = 0; k < DIMENSIONS; k++)
@@ -80,12 +78,39 @@ dbscan_wrapper(PyObject* self, PyObject* args)
             
         }
 
-        PyList_SetItem(py_clusters, i, py_cluster);;
+        PyList_SetItem(py_clusters, i-1, py_cluster);;
         
     }
 
+    // Freeing everything. This is a sign of awful design and I
+    // apologize for it but I am very, very new to c and 
+    // did not imagine this would be as hard as it is.
+    DynamicArray* all_points = dynamic_array_get_element( clusters, 0 );
+    DBScanPoint* pt_to_free;
+    DynamicArray* arr;
+    for ( i = 0; i < num_points; i++ )
+    {
+        pt_to_free = dynamic_array_get_element( all_points, i );
+        arr = (*pt_to_free).points_in_threshold;
+        free( (*arr)._elements );
+        free(arr); 
+        free(pt_to_free);
+    }
 
-    destroy_dynamic_array(clusters, FREE_ELEMENTS);
+    free( (*all_points)._elements );
+    free( all_points );
+
+    DynamicArray* inner_arr;
+    for ( i = 1; i < (*clusters).num_elements; i++ )
+    {
+        inner_arr = dynamic_array_get_element( clusters, i );
+        free( (*inner_arr)._elements );
+        free( inner_arr );
+    }
+
+    free( (*clusters)._elements );
+    free( clusters );
+
     return py_clusters;
 }
 

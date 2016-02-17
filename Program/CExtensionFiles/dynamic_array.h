@@ -16,4 +16,5 @@ void* dynamic_array_get_element(DynamicArray*, int);
 DynamicArray* create_dynamic_array(int);
 
 void destroy_dynamic_array(DynamicArray*, int);
+void destroy_n_nested_dynamic_array( DynamicArray*, int, int );
 

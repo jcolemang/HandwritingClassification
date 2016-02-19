@@ -12,7 +12,7 @@ def main():
 
     points_range = 1000
     num_points = 1 
-    eps = 10
+    eps = 100
     threshold = 1
     times_to_run = 1000
 

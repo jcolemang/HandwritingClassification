@@ -17,8 +17,10 @@ image_size = 28, 28
 mouse_was_pressed = False
 eraser_mode = False
 r = 10
+
 threshold_num = 1
-eps = 1
+eps = 10
+
 prev = pygame.mouse.get_pos()
 current = pygame.mouse.get_pos()
 save_path = '/home/coleman/Pictures/saved.bmp'
@@ -76,9 +78,9 @@ def check_input( display, classifier):
                     print 'Python time: {0:.4f}\nC time: {1:.4f}\nPython/C: {2:0.4f}'\
                             .format(python_time, c_time, python_time/c_time)
 
-                #surf = py_dbscan.color_clusters( display, threshold_num, eps )
-                #display.blit( surf, (0, 0) )
-                #pygame.display.update()
+                surf = py_dbscan.color_clusters( display, threshold_num, eps )
+                display.blit( surf, (0, 0) )
+                pygame.display.update()
 
             if event.key == pygame.K_e:
                 print "'e' pressed"

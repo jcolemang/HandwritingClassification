@@ -453,7 +453,7 @@ def color_clusters( display, threshold_num, eps ):
 
 
 def c_get_square_cluster_image_vectors( display, image_size, threshold_num, eps):
-    groups = dbscanV2( display, threshold_num, eps )
+    groups = dbscanV2( display, eps, threshold_num )
     images = []
     surfaces = []
     image_vectors = []

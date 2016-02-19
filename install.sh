@@ -9,6 +9,7 @@ conda install anaconda-client
 # anaconda search -t conda pygame
 # 
 # This is the install that worked for me
+# it should work for any 64-bit Ubuntu system.
 conda install -c https://conda.binstar.org/tlatorre pygame
 
 # Install PIL (python image library)

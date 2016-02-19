@@ -311,7 +311,7 @@ def combine_groups(groups):
 
 def cluster_to_square_image(cluster):
 
-    padding = 10
+    padding = 5
 
 
     # the c version.
@@ -368,9 +368,6 @@ def cluster_to_square_image(cluster):
         row_shift += (padding / 2) + (num_cols - num_rows) / 2
         col_shift += (padding / 2) 
     
-    #im_array = [ [0 for col in range(square_size+padding)] \
-    #        for row in range(square_size+padding) ]
-
     im_array = numpy.zeros( (square_size+padding, square_size+padding) )
 
     if type(cluster[0]) == tuple:

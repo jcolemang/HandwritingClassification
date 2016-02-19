@@ -18,8 +18,8 @@ mouse_was_pressed = False
 eraser_mode = False
 r = 10
 
-threshold_num = 1
-eps = 10
+threshold_num = 6
+eps = 1
 
 prev = pygame.mouse.get_pos()
 current = pygame.mouse.get_pos()

@@ -1,3 +1,4 @@
+
 """
 
 Please don't judge me on the code. 
@@ -28,9 +29,6 @@ Core = 2
 colors = [ (255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 0, 255), (0, 255, 255), (100, 100, 100), (150, 150, 150), (255, 100, 0), (255, 0, 100) ]
 for i in range(100):
     colors.append((0,0,0))
-
-eps = 10 
-threshhold_num = 8 
 
 
 def scale_to_max_val(vec, max_val=None):
@@ -64,7 +62,10 @@ def clusters_to_surface( groups, size ):
     for i in range(len(groups)):
         for point in groups[i]:
             color = colors[i]
-            surf.set_at( point.get_position(), color )
+            if type( point ) == tuple:
+                surf.set_at( (point[0], point[1]), color )
+            else:
+                surf.set_at( point.get_position(), color )
     return surf
 
 
@@ -101,14 +102,9 @@ class ClusterPoint(object):
 
 
     def distance_to( self, other_point ):
-        try:
-            dist = self._distance_to[other_point]
-        except KeyError:
-            x_diff = ( other_point.x - self.x ) * 5
-            y_diff = ( other_point.y - self.y ) * 0.1
-            dist = sqrt(x_diff * x_diff + y_diff * y_diff)
-            self._distance_to[ other_point ] = dist
-            other_point._distance_to[ self ] = dist
+        x_diff = ( other_point.x - self.x )
+        y_diff = ( other_point.y - self.y )
+        dist = sqrt(x_diff * x_diff + y_diff * y_diff)
         return dist
 
 
@@ -139,6 +135,8 @@ class DBSCANClusterPoint( ClusterPoint ):
         super( DBSCANClusterPoint, self).__init__(x, y)
         self.classification = Noise
         self.connected_to = []        
+        self.visited = False
+
 
     def upgrade(self):
         if self.classification != Core:
@@ -158,6 +156,9 @@ class DBSCANClusterPoint( ClusterPoint ):
 
     def is_connected_to( self, other_pt ):
         return other_pt in self.connected_to
+
+    def has_been_visited(self):
+        return self.visited
 
 
 def classify_points( points, eps, core_threshhold_num ): 
@@ -218,6 +219,19 @@ def group_core_points( core_points ):
         if not point.is_grouped():
             groups.append([point])
     return groups
+
+
+def add_points_to_group(point, group):
+    print len(group)
+    if not point.has_been_visited():
+        group.append(point)
+        point.visited = True
+        for sub_pt in point.connected_to:
+            if sub_pt.has_been_visited():
+                continue
+            if point.is_core() and not sub_pt == point:
+                add_points_to_group(sub_pt, group)
+
 
 
 def group_border_points( border_points, core_groups, eps ):
@@ -376,9 +390,7 @@ def cluster_to_square_image(cluster):
     
     return image    
 
-def dbscan( display, print_stuff=False ):
-    # eps = 30 
-    # threshhold_num = 20
+def dbscan( display, threshold_num, eps, print_stuff=False ):
     t = time.time()
     pixel_array = get_display_matrix( display )
 
@@ -391,7 +403,7 @@ def dbscan( display, print_stuff=False ):
     if print_stuff: print 'Points extracted from array. Size: {0}'.format( len(dbscan_points) )
 
     t = time.time()
-    classify_points( dbscan_points, eps, threshhold_num )
+    classify_points( dbscan_points, eps, threshold_num )
 
     if print_stuff: print 'Points classified'
     s = len(dbscan_points)
@@ -420,28 +432,28 @@ def dbscan( display, print_stuff=False ):
     combine_groups(groups)
     if print_stuff: print 'DBSCAN complete'
     return groups
-    
 
-def dbscanV2( display ):
+
+def dbscanV2( display, eps, threshold_num ):
     pixarr = get_display_matrix(display)
     arr = numpy.array(pixarr)
     pt_locations = numpy.where( arr == 0)
     points = []
     for i in range(len(pt_locations[0])):
-        points.append( (pt_locations[0][i], pt_locations[1][i]) )
-    clusters = cdbscan.dbscan( points, 1, 1 )
+        points.append( (pt_locations[0][i], pt_locations[1][i]))
+    clusters = cdbscan.dbscan( points, threshold_num, eps )
     #    for cluster in clusters:
     #        print cluster
     return clusters
     
 
-def color_clusters( display ):
-    clusters = dbscan( display, print_stuff=False )
+def color_clusters( display, threshold_num, eps ):
+    clusters = dbscanV2( display, threshold_num, eps )
     return clusters_to_surface( clusters, display.get_size() )
 
 
-def get_square_cluster_image_vectors( display, image_size ):
-    groups = dbscan( display )
+def c_get_square_cluster_image_vectors( display, image_size, threshold_num, eps):
+    groups = dbscanV2( display, threshold_num, eps )
     images = []
     surfaces = []
     image_vectors = []
@@ -456,9 +468,8 @@ def get_square_cluster_image_vectors( display, image_size ):
     return image_vectors
 
 
-# this is the 'Do everything' method for classifying with c
-def c_classify_image_digits( display, image_size ):
-    groups = dbscanV2( display )
+def py_get_square_cluster_image_vectors( display, image_size, threshold_num, eps ):
+    groups = dbscan( display, threshold_num, eps ) # the difference is here if you were wondering
     images = []
     surfaces = []
     image_vectors = []
@@ -471,6 +482,41 @@ def c_classify_image_digits( display, image_size ):
         vec = scale_to_max_val(vec, max_val=255)
         image_vectors.append( vec )
     return image_vectors
+
+
+
+
+
+
+
+def py_cluster_points(points, num_points, points_dist):
+    dbscan_points = []
+    for i in range(len(points)):
+        dbscan_points.append( DBSCANClusterPoint( points[i][0], points[i][1] ))
+    classify_points( dbscan_points, points_dist, num_points )
+    eliminate_noise_points( dbscan_points )
+    core_points = get_core_points( dbscan_points ) 
+    border_points = get_border_points( dbscan_points )
+    connect_core_points( core_points, points_dist )
+    groups = group_core_points( core_points )
+    group_border_points( border_points, groups, points_dist  ) 
+    combine_groups(groups)
+    return groups
+
+
+
+def c_cluster_points(points, num_points, points_dist):
+    return cdbscan.dbscan(points, num_points, points_dist) 
+
+
+
+
+
+
+
+
+
+
 
 
 

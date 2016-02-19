@@ -17,13 +17,15 @@ image_size = 28, 28
 mouse_was_pressed = False
 eraser_mode = False
 r = 10
+threshold_num = 1
+eps = 1
 prev = pygame.mouse.get_pos()
 current = pygame.mouse.get_pos()
 save_path = '/home/coleman/Pictures/saved.bmp'
 
 
-time_both = False 
-use_c_dbscan = False
+time_both = False
+use_c_dbscan = True
 
 
 def check_input( display, classifier):
@@ -39,17 +41,29 @@ def check_input( display, classifier):
 
                 if time_both:
                     c_start = time.time()
-                    vectors = py_dbscan.c_classify_image_digits( display, image_size )
+                    vectors = py_dbscan.c_get_square_cluster_image_vectors( display, image_size, threshold_num, eps)
                     c_time = time.time() - c_start
 
+                    print  'c clusters: {0}'.format( len(vectors) )
+
                     python_start = time.time()
-                    py_dbscan.get_square_cluster_image_vectors( display, image_size )
+                    vectors = py_dbscan.py_get_square_cluster_image_vectors( display, image_size, threshold_num, eps)
                     python_time = time.time() - python_start
+
+                    print 'Python clusters: {0}'.format(len(vectors))
                 
                 elif use_c_dbscan:
-                    vectors = py_dbscan.c_classify_image_digits( display, image_size )
+                    c_start = time.time()
+                    vectors = py_dbscan.c_get_square_cluster_image_vectors( display, image_size, threshold_num, eps)
+                    c_time = time.time() - c_start
+                    print  'c clusters: {0}'.format( len(vectors) )
+                    print 'Time taken (c): {0:.4f}'.format(c_time)
                 else: 
-                    vectors = py_dbscan.get_square_cluster_image_vectors( display, image_size )
+                    python_start = time.time()
+                    vectors = py_dbscan.py_get_square_cluster_image_vectors( display, image_size, threshold_num, eps)
+                    python_time = time.time() - python_start
+                    print 'Python clusters: {0}'.format(len(vectors))
+                    print 'Time taken (python): {0:.4f}'.format(python_time)
 
                     
                 title = ''
@@ -57,17 +71,14 @@ def check_input( display, classifier):
                     title += str(classifier.predict(v)[0])
                 pygame.display.set_caption(title)
 
-                print '\n\nPrediction: {0}'.format(title)
+                print 'Prediction: {0}'.format(title)
                 if time_both:
-                    print 'Python time: {0:.4f}\nC time: {1:.4f}\nPython/C: {2:0.4f}\n\n'\
+                    print 'Python time: {0:.4f}\nC time: {1:.4f}\nPython/C: {2:0.4f}'\
                             .format(python_time, c_time, python_time/c_time)
-                else:
-                    print '\n\n'
 
-                # surf = dbscan.color_clusters( display )
-                # display.blit( surf, (0, 0) )
-                # pygame.display.update()
-                # time.sleep(1)
+                #surf = py_dbscan.color_clusters( display, threshold_num, eps )
+                #display.blit( surf, (0, 0) )
+                #pygame.display.update()
 
             if event.key == pygame.K_e:
                 print "'e' pressed"

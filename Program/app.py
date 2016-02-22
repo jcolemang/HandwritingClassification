@@ -31,7 +31,7 @@ class MainHandler(tornado.web.RequestHandler):
         b = a[a.find(',') + 1:]
         c = Image.open(StringIO(base64.decodestring(b)))
         test = multi_to_single_channel(numpy.array(c), 3)
-        foo = Image.fromarray(numpy.array(test).reshape(200, 400))
+        foo = Image.fromarray(numpy.array(test).reshape(200, 400),mode="L")
         vectors = py_dbscan.get_vectors(foo,1,1)
         s=""
         for vector in vectors:

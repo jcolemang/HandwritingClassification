@@ -454,15 +454,17 @@ def get_vectors(image, eps, threshold):
     clusters = cdbscan.dbscan( points, threshold, eps )
     images = []
     image_vectors = []
+    i=0
     for cluster in clusters:
         images.append( cluster_to_square_image(cluster) )
     for image in images:
         resized = image.resize( (28,28), Image.ANTIALIAS )
-        resized.show()
+        resized.convert('L').save('imgs'+str(i)+'.bmp')
         vec = numpy.array(resized).ravel()
         vec = replace_negatives(vec)
         vec = scale_to_max_val( vec, max_val=255 )
         image_vectors.append(vec)
+        i+=1
     return image_vectors
 	
     

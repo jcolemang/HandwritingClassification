@@ -14,7 +14,7 @@ TODO: Comment all this nonsense.
 
 """
 from math import sqrt
-import pygame
+#import pygame
 import numpy
 import pdb
 import dbscan as cdbscan # this should be the c module
@@ -442,6 +442,29 @@ def dbscanV2( display, eps, threshold_num ):
     #    for cluster in clusters:
     #        print cluster
     return clusters
+
+
+def get_vectors(image, eps, threshold):
+    pil_image = image
+    image_array = numpy.array(pil_image)
+    pt_locations = numpy.where( image_array != 0 ) 
+    points = []
+    for i in range(len(pt_locations)):
+        points.append( (pt_locations[0][i], pt_locations[1][i]) )
+    clusters = cdbscan.dbscan( points, threshold, eps )
+    images = []
+    image_vectors = []
+    for cluster in clusters:
+        images.append( cluster_to_square_image(cluster) )
+    for image in images:
+        resized = image.resize( (28,28), Image.ANTIALIAS )
+        resized.show()
+        vec = numpy.array(resized).ravel()
+        vec = replace_negatives(vec)
+        vec = scale_to_max_val( vec, max_val=255 )
+        image_vectors.append(vec)
+    return image_vectors
+	
     
 
 def color_clusters( display, threshold_num, eps ):

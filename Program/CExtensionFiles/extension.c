@@ -41,8 +41,6 @@ dbscan_wrapper(PyObject* self, PyObject* args)
         num_points++;
     }
 
-    printf("Number of points: %d\n", num_points);
-
     /* The actual scanning */
     DynamicArray* clusters = dbscan( points, num_points, threshold_dist, threshold_num );
 

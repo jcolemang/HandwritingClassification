@@ -447,9 +447,11 @@ def dbscanV2( display, eps, threshold_num ):
 def get_vectors(image, eps, threshold):
     pil_image = image
     image_array = numpy.array(pil_image)
+    print image_array
     pt_locations = numpy.where( image_array != 0 ) 
+    print pt_locations
     points = []
-    for i in range(len(pt_locations)):
+    for i in range(len(pt_locations[0])):
         points.append( (pt_locations[0][i], pt_locations[1][i]) )
     clusters = cdbscan.dbscan( points, threshold, eps )
     images = []

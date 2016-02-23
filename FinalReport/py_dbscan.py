@@ -455,6 +455,7 @@ def get_vectors(image, eps, threshold):
         images.append( cluster_to_square_image(cluster) )
     for image in images:
         resized = image.resize( (28,28), Image.ANTIALIAS )
+        resized.convert('L').save('imgs'+str(i)+'.bmp')
         vec = numpy.array(resized).ravel()
         vec = replace_negatives(vec)
         vec = scale_to_max_val( vec, max_val=255 )

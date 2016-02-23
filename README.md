@@ -13,11 +13,14 @@ HIGHLY recommend checking its contents before
 running it. In particular, the pygame installation
 depends on your operating system. 
 
+The website server is also in the Program/ folder.
+run 'python app.py' to start the server. Go to
+'localhost:8889/home' in a browser to use the
+site, or pay for us to put in on a hosting
+service.
+
 Most of the other files are just for reference. 
 
-I sincerely apologize for the c code. I had not written
-any significant c program before this one. The circular
-dependencies are particularly bad. -James 
 
 
 

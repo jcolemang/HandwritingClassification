@@ -1,6 +1,6 @@
 var canvas, ctx, flag = false, prevX = 0, currX = 0, prevY = 0, currY = 0, dot_flag = false;
 
-var x = "black", y = 10;
+var x = "black", y = 18;
 
 
 
@@ -49,7 +49,7 @@ function color(obj) {
 		break;
 	}
 	if (x == "white")
-		y = 14;
+		y = 18;
 	else
 		y = 10;
 

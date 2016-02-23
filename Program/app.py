@@ -37,7 +37,6 @@ class MainHandler(tornado.web.RequestHandler):
         s=""
         for vector in vectors:
             s=str(classifier.predict(vector)[0])+s
-        print s
         json_obj = {}
         json_obj['ret']= s
         self.write(json_obj)

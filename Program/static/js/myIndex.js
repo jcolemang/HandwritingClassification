@@ -75,13 +75,17 @@ function submit() {
 //	bImg = document.getElementById('Img');
 //	bImg.src = "data:image/png;base64," + dataImage;
 	dataURL = canvas.toDataURL("image/png");
-	$.ajax({
+	f=$.ajax({
 		type: "POST",
 		url: "/home",
 		data: {
 			imgBase64: dataURL
-		}
+		},
+        success: function (response) {
+            document.getElementById("header").innerHTML = "The Current number is: "+response['ret'];
+        }
 	});
+
 }
 
 

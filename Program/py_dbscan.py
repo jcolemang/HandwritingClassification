@@ -447,9 +447,7 @@ def dbscanV2( display, eps, threshold_num ):
 def get_vectors(image, eps, threshold):
     pil_image = image
     image_array = numpy.array(pil_image)
-    print image_array
     pt_locations = numpy.where( image_array != 0 ) 
-    print pt_locations
     points = []
     for i in range(len(pt_locations[0])):
         points.append( (pt_locations[0][i], pt_locations[1][i]) )
@@ -461,7 +459,6 @@ def get_vectors(image, eps, threshold):
         images.append( cluster_to_square_image(cluster) )
     for image in images:
         resized = image.resize( (28,28), Image.ANTIALIAS )
-        resized.convert('L').save('imgs'+str(i)+'.bmp')
         vec = numpy.array(resized).ravel()
         vec = replace_negatives(vec)
         vec = scale_to_max_val( vec, max_val=255 )

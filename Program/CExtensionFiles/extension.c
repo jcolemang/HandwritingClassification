@@ -80,9 +80,9 @@ dbscan_wrapper(PyObject* self, PyObject* args)
         
     }
 
-    // Freeing everything. This is a sign of awful design and I
+    // Freeing everything. This is bad design and I
     // apologize for it but I am very, very new to c and 
-    // did not imagine this would be as hard as it is.
+    // did not imagine memory management would be as hard as it is.
     DynamicArray* all_points = dynamic_array_get_element( clusters, 0 );
     DBScanPoint* pt_to_free;
     DynamicArray* arr;
@@ -112,7 +112,7 @@ dbscan_wrapper(PyObject* self, PyObject* args)
     return py_clusters;
 }
 
-
+// I am not entirely sure exactly what these do.
 static PyMethodDef ExtensionMethods[] =
 {
     {"dbscan", dbscan_wrapper, METH_VARARGS, "Run dbscan"},

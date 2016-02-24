@@ -17,7 +17,7 @@ from math import sqrt
 try:
     import pygame
 except:
-    print 'You don\'t have pygame. You will not be able to classify with the pygame application. '
+    print 'You don\'t have pygame. You will not be able to use the desktop application. '
 import numpy
 import pdb
 import dbscan as cdbscan # this should be the c module
